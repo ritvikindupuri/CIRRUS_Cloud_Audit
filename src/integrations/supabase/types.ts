@@ -14,7 +14,217 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agent_runs: {
+        Row: {
+          agent_type: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          position_x: number
+          position_y: number
+          scan_id: string
+          started_at: string | null
+          status: string
+          summary: string | null
+        }
+        Insert: {
+          agent_type: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          position_x?: number
+          position_y?: number
+          scan_id: string
+          started_at?: string | null
+          status?: string
+          summary?: string | null
+        }
+        Update: {
+          agent_type?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          position_x?: number
+          position_y?: number
+          scan_id?: string
+          started_at?: string | null
+          status?: string
+          summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_runs_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_steps: {
+        Row: {
+          agent_run_id: string
+          created_at: string
+          error: string | null
+          id: string
+          kind: string
+          step_index: number
+          thought: string | null
+          tool_input: Json | null
+          tool_name: string | null
+          tool_output: Json | null
+        }
+        Insert: {
+          agent_run_id: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind: string
+          step_index: number
+          thought?: string | null
+          tool_input?: Json | null
+          tool_name?: string | null
+          tool_output?: Json | null
+        }
+        Update: {
+          agent_run_id?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          step_index?: number
+          thought?: string | null
+          tool_input?: Json | null
+          tool_name?: string | null
+          tool_output?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_steps_agent_run_id_fkey"
+            columns: ["agent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      findings: {
+        Row: {
+          agent_run_id: string | null
+          created_at: string
+          description: string | null
+          evidence: Json | null
+          id: string
+          resource: string | null
+          scan_id: string
+          severity: string
+          title: string
+        }
+        Insert: {
+          agent_run_id?: string | null
+          created_at?: string
+          description?: string | null
+          evidence?: Json | null
+          id?: string
+          resource?: string | null
+          scan_id: string
+          severity: string
+          title: string
+        }
+        Update: {
+          agent_run_id?: string | null
+          created_at?: string
+          description?: string | null
+          evidence?: Json | null
+          id?: string
+          resource?: string | null
+          scan_id?: string
+          severity?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "findings_agent_run_id_fkey"
+            columns: ["agent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "findings_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      scans: {
+        Row: {
+          aws_account_alias: string | null
+          aws_account_id: string | null
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          name: string
+          region: string
+          selected_agents: string[]
+          started_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          aws_account_alias?: string | null
+          aws_account_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          name: string
+          region?: string
+          selected_agents?: string[]
+          started_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          aws_account_alias?: string | null
+          aws_account_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          name?: string
+          region?: string
+          selected_agents?: string[]
+          started_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
