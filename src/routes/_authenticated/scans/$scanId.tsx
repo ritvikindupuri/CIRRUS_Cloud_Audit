@@ -158,13 +158,20 @@ function ScanDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {(["critical","high","medium","low","info"] as const).map((s) =>
-              severityCounts[s] ? (
-                <Badge key={s} variant="outline" className={`font-mono text-[10px] uppercase severity-${s}`}>
+            {(["critical","high","medium","low","info"] as const).map((s) => {
+              const cls: Record<typeof s, string> = {
+                critical: "text-severity-critical",
+                high: "text-severity-high",
+                medium: "text-severity-medium",
+                low: "text-severity-low",
+                info: "text-severity-info",
+              };
+              return severityCounts[s] ? (
+                <Badge key={s} variant="outline" className={`font-mono text-[10px] uppercase ${cls[s]}`}>
                   {severityCounts[s]} {s}
                 </Badge>
-              ) : null
-            )}
+              ) : null;
+            })}
             <Badge variant="outline" className="font-mono text-[10px] uppercase">{scan?.status}</Badge>
             {scan?.status === "error" && (
               <Button size="sm" variant="outline" onClick={retry}>
