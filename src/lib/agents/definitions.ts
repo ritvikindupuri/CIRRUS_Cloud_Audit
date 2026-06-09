@@ -1,0 +1,68 @@
+// Client-safe agent metadata. No AWS / LLM imports here so this can be
+// imported from React components.
+
+export type AgentType = "recon" | "iam" | "s3" | "ec2";
+
+export interface AgentDefinition {
+  type: AgentType;
+  name: string;
+  tagline: string;
+  description: string;
+  colorVar: string;
+  icon: "radar" | "key" | "bucket" | "network";
+}
+
+export const AGENT_DEFINITIONS: Record<AgentType, AgentDefinition> = {
+  recon: {
+    type: "recon",
+    name: "Recon",
+    tagline: "Identity & surface mapping",
+    description:
+      "Establishes who you are in the account, enumerates regions, account aliases, and the initial attack surface.",
+    colorVar: "var(--color-agent-recon)",
+    icon: "radar",
+  },
+  iam: {
+    type: "iam",
+    name: "IAM Auditor",
+    tagline: "Privilege & policy analysis",
+    description:
+      "Enumerates users, roles, policies. Hunts for AdministratorAccess, wildcards, unused credentials, and privilege-escalation paths.",
+    colorVar: "var(--color-agent-iam)",
+    icon: "key",
+  },
+  s3: {
+    type: "s3",
+    name: "S3 Hunter",
+    tagline: "Bucket exposure & data risk",
+    description:
+      "Lists buckets, inspects public access blocks, ACLs, encryption, and policy. Flags publicly readable / writable buckets.",
+    colorVar: "var(--color-agent-s3)",
+    icon: "bucket",
+  },
+  ec2: {
+    type: "ec2",
+    name: "EC2 / Network",
+    tagline: "Exposed compute & SGs",
+    description:
+      "Audits security groups for 0.0.0.0/0 ingress on sensitive ports, finds public instances and overly-open network paths.",
+    colorVar: "var(--color-agent-ec2)",
+    icon: "network",
+  },
+};
+
+export const AGENT_ORDER: AgentType[] = ["recon", "iam", "s3", "ec2"];
+
+export const AWS_REGIONS = [
+  "us-east-1",
+  "us-east-2",
+  "us-west-1",
+  "us-west-2",
+  "eu-west-1",
+  "eu-west-2",
+  "eu-central-1",
+  "ap-south-1",
+  "ap-southeast-1",
+  "ap-southeast-2",
+  "ap-northeast-1",
+];
