@@ -114,10 +114,17 @@ export const runScan = createServerFn({ method: "POST" })
 // ── Remediation playbook generation ─────────────────────────────────────────
 const RemediationInput = z.object({ findingId: z.string().uuid() });
 
+export interface Remediation {
+  explanation: string;
+  cli: string;
+  cloudformation: string;
+  rollback: string;
+}
+
 export const generateRemediation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => RemediationInput.parse(input))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }): Promise<Remediation> => {
     const { supabase, userId } = context;
 
     const { data: finding } = await supabase
@@ -134,7 +141,7 @@ export const generateRemediation = createServerFn({ method: "POST" })
       .single();
     if (!scan || scan.user_id !== userId) throw new Error("Not authorized");
 
-    if (finding.remediation) return finding.remediation as Record<string, unknown>;
+    if (finding.remediation) return finding.remediation as unknown as Remediation;
 
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
@@ -161,15 +168,24 @@ Respond with ONLY valid JSON in this exact shape (no markdown, no backticks):
 }`;
 
     const { text } = await generateText({ model, prompt });
-    let parsed: Record<string, unknown> = { raw: text };
+    let parsed: Remediation;
     try {
       const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
-      parsed = JSON.parse(cleaned);
+      const obj = JSON.parse(cleaned);
+      parsed = {
+        explanation: String(obj.explanation ?? ""),
+        cli: String(obj.cli ?? ""),
+        cloudformation: String(obj.cloudformation ?? ""),
+        rollback: String(obj.rollback ?? ""),
+      };
     } catch {
       parsed = { explanation: text, cli: "", cloudformation: "", rollback: "" };
     }
 
-    await supabase.from("findings").update({ remediation: parsed }).eq("id", finding.id);
+    await supabase
+      .from("findings")
+      .update({ remediation: parsed as unknown as never })
+      .eq("id", finding.id);
     return parsed;
   });
 
