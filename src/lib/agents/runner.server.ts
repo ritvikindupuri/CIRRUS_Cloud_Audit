@@ -666,6 +666,33 @@ Rules:
 
 // ─── Public entry point ────────────────────────────────────────────────────
 
+// Build a custom-agent toolset by merging all read-only AWS tools, filtered
+// by an allowed-services whitelist. Tool names are prefixed `aws_<service>_`.
+function makeCustomTools(ctx: RunCtx, services: AwsService[]) {
+  const all = {
+    ...makeReconTools(ctx),
+    ...makeIamTools(ctx),
+    ...makeS3Tools(ctx),
+    ...makeEc2Tools(ctx),
+  } as Record<string, unknown>;
+  const allowed = new Set(services);
+  const filtered: Record<string, unknown> = { report_finding: all.report_finding };
+  for (const [name, t] of Object.entries(all)) {
+    if (name === "report_finding") continue;
+    const m = /^aws_([^_]+)_/.exec(name);
+    if (m && allowed.has(m[1] as AwsService)) filtered[name] = t;
+  }
+  return filtered as ReturnType<typeof makeReconTools>;
+}
+
+export interface CustomAgentConfig {
+  id: string;
+  name: string;
+  description?: string | null;
+  system_prompt: string;
+  services: string[];
+}
+
 export async function runAgent(params: {
   supabase: SupabaseClient;
   scanId: string;
@@ -673,8 +700,9 @@ export async function runAgent(params: {
   agentType: AgentType;
   creds: AwsCredsInput;
   apiKey: string;
+  customAgent?: CustomAgentConfig | null;
 }): Promise<{ summary: string }> {
-  const { supabase, scanId, agentRunId, agentType, creds, apiKey } = params;
+  const { supabase, scanId, agentRunId, agentType, creds, apiKey, customAgent } = params;
   const ctx: RunCtx = { supabase, scanId, agentRunId, creds, stepCounter: { i: 0 } };
 
   await supabase
@@ -682,14 +710,35 @@ export async function runAgent(params: {
     .update({ status: "running", started_at: new Date().toISOString() })
     .eq("id", agentRunId);
 
-  const tools =
-    agentType === "recon"
-      ? makeReconTools(ctx)
-      : agentType === "iam"
-        ? makeIamTools(ctx)
-        : agentType === "s3"
-          ? makeS3Tools(ctx)
-          : makeEc2Tools(ctx);
+  let tools: ReturnType<typeof makeReconTools>;
+  let system: string;
+  if (agentType === "custom") {
+    if (!customAgent) throw new Error("Custom agent config missing");
+    const services = (customAgent.services ?? []).filter((s): s is AwsService =>
+      ["sts", "iam", "s3", "ec2"].includes(s),
+    );
+    tools = makeCustomTools(ctx, services);
+    system = `You are "${customAgent.name}", a user-defined custom agent inside Cirrus, an autonomous AWS pentest platform.
+
+User-provided instructions:
+${customAgent.system_prompt}
+
+Rules:
+- Use only the AWS tools available to you (restricted to: ${services.join(", ") || "none"}).
+- Before each tool call, write ONE short sentence of reasoning explaining why.
+- Call report_finding for anything risky, with an appropriate severity.
+- When done, write a 1-paragraph summary, then STOP.`;
+  } else {
+    tools =
+      agentType === "recon"
+        ? makeReconTools(ctx)
+        : agentType === "iam"
+          ? makeIamTools(ctx)
+          : agentType === "s3"
+            ? makeS3Tools(ctx)
+            : makeEc2Tools(ctx);
+    system = SYSTEM_PROMPTS[agentType];
+  }
 
   const gateway = createLovableAiGatewayProvider(apiKey);
   const model = gateway("google/gemini-3-flash-preview");
@@ -697,7 +746,7 @@ export async function runAgent(params: {
   try {
     const { text } = await generateText({
       model,
-      system: SYSTEM_PROMPTS[agentType],
+      system,
       prompt: `Begin your scan now. AWS region: ${creds.region}.`,
       tools,
       stopWhen: stepCountIs(50),
@@ -728,3 +777,4 @@ export async function runAgent(params: {
     return { summary: `Error: ${message}` };
   }
 }
+
