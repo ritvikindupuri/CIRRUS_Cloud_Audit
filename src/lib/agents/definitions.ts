@@ -1,7 +1,11 @@
 // Client-safe agent metadata. No AWS / LLM imports here so this can be
 // imported from React components.
 
-export type AgentType = "recon" | "iam" | "s3" | "ec2";
+export type BuiltinAgentType = "recon" | "iam" | "s3" | "ec2";
+export type AgentType = BuiltinAgentType | "custom";
+
+export const AWS_SERVICE_OPTIONS = ["sts", "iam", "s3", "ec2"] as const;
+export type AwsService = (typeof AWS_SERVICE_OPTIONS)[number];
 
 export interface AgentDefinition {
   type: AgentType;
@@ -12,7 +16,7 @@ export interface AgentDefinition {
   icon: "radar" | "key" | "bucket" | "network";
 }
 
-export const AGENT_DEFINITIONS: Record<AgentType, AgentDefinition> = {
+export const AGENT_DEFINITIONS: Record<BuiltinAgentType, AgentDefinition> = {
   recon: {
     type: "recon",
     name: "Recon",
@@ -51,7 +55,29 @@ export const AGENT_DEFINITIONS: Record<AgentType, AgentDefinition> = {
   },
 };
 
-export const AGENT_ORDER: AgentType[] = ["recon", "iam", "s3", "ec2"];
+export const CUSTOM_AGENT_DEFINITION: AgentDefinition = {
+  type: "custom",
+  name: "Custom Agent",
+  tagline: "User-defined check",
+  description: "A user-authored agent with a custom system prompt and AWS tool whitelist.",
+  colorVar: "#a78bfa",
+  icon: "radar",
+};
+
+export function getAgentDefinition(
+  type: AgentType,
+  custom?: { name?: string | null; description?: string | null; color?: string | null },
+): AgentDefinition {
+  if (type !== "custom") return AGENT_DEFINITIONS[type];
+  return {
+    ...CUSTOM_AGENT_DEFINITION,
+    name: custom?.name ?? CUSTOM_AGENT_DEFINITION.name,
+    tagline: custom?.description?.slice(0, 60) ?? CUSTOM_AGENT_DEFINITION.tagline,
+    colorVar: custom?.color ?? CUSTOM_AGENT_DEFINITION.colorVar,
+  };
+}
+
+export const AGENT_ORDER: BuiltinAgentType[] = ["recon", "iam", "s3", "ec2"];
 
 export const AWS_REGIONS = [
   "us-east-1",

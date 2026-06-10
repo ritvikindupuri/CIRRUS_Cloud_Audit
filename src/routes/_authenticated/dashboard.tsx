@@ -4,8 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CirrusLogo } from "@/components/cirrus-logo";
-import { Plus, LogOut, Clock, Check, AlertCircle, Loader2 } from "lucide-react";
+import { Plus, LogOut, Clock, Check, AlertCircle, Loader2, Beaker, Calendar } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+
+interface DueSchedule {
+  id: string;
+  name: string;
+  region: string;
+  next_run_at: string;
+}
 
 interface Scan {
   id: string;
@@ -26,19 +33,28 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function Dashboard() {
   const navigate = useNavigate();
   const [scans, setScans] = useState<Scan[]>([]);
+  const [dueSchedules, setDueSchedules] = useState<DueSchedule[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     async function load() {
-      const { data } = await supabase
-        .from("scans")
-        .select(
-          "id, name, aws_account_id, aws_account_alias, region, status, created_at, selected_agents",
-        )
-        .order("created_at", { ascending: false });
+      const [{ data: scanData }, { data: schedData }] = await Promise.all([
+        supabase
+          .from("scans")
+          .select(
+            "id, name, aws_account_id, aws_account_alias, region, status, created_at, selected_agents",
+          )
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("scheduled_scans")
+          .select("id, name, region, next_run_at")
+          .lte("next_run_at", new Date().toISOString())
+          .order("next_run_at"),
+      ]);
       if (active) {
-        setScans((data ?? []) as Scan[]);
+        setScans((scanData ?? []) as Scan[]);
+        setDueSchedules((schedData ?? []) as DueSchedule[]);
         setLoading(false);
       }
     }
@@ -46,9 +62,8 @@ function Dashboard() {
 
     const channel = supabase
       .channel("scans:list")
-      .on("postgres_changes", { event: "*", schema: "public", table: "scans" }, () => {
-        void load();
-      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "scans" }, () => void load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "scheduled_scans" }, () => void load())
       .subscribe();
     return () => {
       active = false;
@@ -69,6 +84,16 @@ function Dashboard() {
             <CirrusLogo />
           </Link>
           <div className="flex items-center gap-2">
+            <Link to="/agents">
+              <Button size="sm" variant="ghost">
+                <Beaker className="mr-1.5 h-3.5 w-3.5" /> Custom agents
+              </Button>
+            </Link>
+            <Link to="/schedules">
+              <Button size="sm" variant="ghost">
+                <Calendar className="mr-1.5 h-3.5 w-3.5" /> Schedules
+              </Button>
+            </Link>
             <Link to="/scans/new">
               <Button size="sm">
                 <Plus className="mr-1.5 h-3.5 w-3.5" /> New scan
@@ -80,6 +105,27 @@ function Dashboard() {
           </div>
         </div>
       </header>
+
+      {dueSchedules.length > 0 && (
+        <div className="border-b border-primary/40 bg-primary/5">
+          <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+            <div className="flex items-center gap-2 text-sm">
+              <AlertCircle className="h-4 w-4 text-primary" />
+              <span className="font-medium">
+                {dueSchedules.length} drift check{dueSchedules.length === 1 ? "" : "s"} due
+              </span>
+              <span className="text-muted-foreground truncate">
+                — {dueSchedules.map((s) => s.name).join(", ")}
+              </span>
+            </div>
+            <Link to="/schedules">
+              <Button size="sm" variant="outline">
+                Review schedules
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
 
       <main className="mx-auto max-w-6xl px-6 py-10">
         <div className="mb-8 flex items-end justify-between">

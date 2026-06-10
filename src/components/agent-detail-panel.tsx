@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { AGENT_DEFINITIONS, type AgentType } from "@/lib/agents/definitions";
+import { getAgentDefinition, type AgentType } from "@/lib/agents/definitions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { ChevronRight, Terminal } from "lucide-react";
@@ -22,6 +22,8 @@ interface Run {
   agent_type: AgentType;
   status: string;
   summary: string | null;
+  custom_agent_id?: string | null;
+  custom_agent?: { name: string; description: string | null; color: string } | null;
 }
 
 export function AgentDetailPanel({ run }: { run: Run | null }) {
@@ -103,7 +105,7 @@ export function AgentDetailPanel({ run }: { run: Run | null }) {
     );
   }
 
-  const def = AGENT_DEFINITIONS[run.agent_type];
+  const def = getAgentDefinition(run.agent_type, run.custom_agent ?? undefined);
 
   return (
     <div className="flex h-full flex-col">

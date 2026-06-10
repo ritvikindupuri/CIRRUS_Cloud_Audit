@@ -10,14 +10,15 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { supabase } from "@/integrations/supabase/client";
-import { AGENT_DEFINITIONS, type AgentType } from "@/lib/agents/definitions";
+import { getAgentDefinition, type AgentType } from "@/lib/agents/definitions";
 import { AgentNode, type AgentNodeData } from "@/components/agent-node";
 import { AgentDetailPanel } from "@/components/agent-detail-panel";
 import { FindingsList } from "@/components/findings-list";
+import { DriftDiff } from "@/components/drift-diff";
 import { CirrusLogo } from "@/components/cirrus-logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, RotateCw, Download } from "lucide-react";
+import { ArrowLeft, RotateCw, Download, GitCompare } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { runScan } from "@/lib/scans.functions";
 import { loadCreds } from "@/lib/aws-creds";
@@ -34,6 +35,8 @@ interface ScanRow {
   selected_agents: string[];
   created_at: string;
   error_message: string | null;
+  parent_scan_id: string | null;
+  scheduled_scan_id: string | null;
 }
 interface RunRow {
   id: string;
@@ -43,6 +46,7 @@ interface RunRow {
   summary: string | null;
   position_x: number;
   position_y: number;
+  custom_agent_id: string | null;
 }
 interface FindingRow {
   id: string;
@@ -52,6 +56,13 @@ interface FindingRow {
   title: string;
   description: string | null;
   resource: string | null;
+  remediation: Record<string, unknown> | null;
+}
+interface CustomAgentRow {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string;
 }
 
 export const Route = createFileRoute("/_authenticated/scans/$scanId")({
@@ -66,8 +77,10 @@ function ScanDetail() {
   const [scan, setScan] = useState<ScanRow | null>(null);
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [findings, setFindings] = useState<FindingRow[]>([]);
+  const [parentFindings, setParentFindings] = useState<FindingRow[] | null>(null);
+  const [customAgents, setCustomAgents] = useState<Record<string, CustomAgentRow>>({});
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
-  const [tab, setTab] = useState<"trace" | "findings">("trace");
+  const [tab, setTab] = useState<"trace" | "findings" | "drift">("trace");
 
   useEffect(() => {
     let active = true;
@@ -83,28 +96,38 @@ function ScanDetail() {
       setRuns((r ?? []) as RunRow[]);
       setFindings((f ?? []) as FindingRow[]);
       if (!selectedRunId && r && r.length > 0) setSelectedRunId(r[0].id);
+
+      const customIds = (r ?? [])
+        .map((x) => x.custom_agent_id)
+        .filter((x): x is string => !!x);
+      if (customIds.length > 0) {
+        const { data: customs } = await supabase
+          .from("custom_agents")
+          .select("id, name, description, color")
+          .in("id", customIds);
+        const map: Record<string, CustomAgentRow> = {};
+        for (const c of customs ?? []) map[c.id] = c as CustomAgentRow;
+        if (active) setCustomAgents(map);
+      }
+
+      const parentId = (s as ScanRow | null)?.parent_scan_id;
+      if (parentId) {
+        const { data: pf } = await supabase.from("findings").select("*").eq("scan_id", parentId);
+        if (active) setParentFindings((pf ?? []) as FindingRow[]);
+      }
     }
     void load();
 
     const channel = supabase
       .channel(`scan:${scanId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "scans", filter: `id=eq.${scanId}` },
-        () => void load(),
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "agent_runs", filter: `scan_id=eq.${scanId}` },
-        () => void load(),
-      )
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "findings", filter: `scan_id=eq.${scanId}` },
-        (p) => {
-          setFindings((prev) => [...prev, p.new as FindingRow]);
-        },
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "scans", filter: `id=eq.${scanId}` }, () => void load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "agent_runs", filter: `scan_id=eq.${scanId}` }, () => void load())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "findings", filter: `scan_id=eq.${scanId}` }, (p) => {
+        setFindings((prev) => [...prev, p.new as FindingRow]);
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "findings", filter: `scan_id=eq.${scanId}` }, (p) => {
+        setFindings((prev) => prev.map((f) => (f.id === (p.new as FindingRow).id ? (p.new as FindingRow) : f)));
+      })
       .subscribe();
 
     return () => {
@@ -114,22 +137,25 @@ function ScanDetail() {
   }, [scanId, selectedRunId]);
 
   const nodes: Node<AgentNodeData>[] = useMemo(() => {
-    return runs.map((r) => ({
-      id: r.id,
-      type: "agent",
-      position: { x: r.position_x, y: r.position_y },
-      data: {
-        agent: AGENT_DEFINITIONS[r.agent_type],
-        status: r.status,
-        findingsCount: findings.filter((f) => f.agent_run_id === r.id).length,
-        selected: selectedRunId === r.id,
-        onSelect: () => setSelectedRunId(r.id),
-      },
-    }));
-  }, [runs, findings, selectedRunId]);
+    return runs.map((r) => {
+      const custom = r.custom_agent_id ? customAgents[r.custom_agent_id] : undefined;
+      const def = getAgentDefinition(r.agent_type, custom);
+      return {
+        id: r.id,
+        type: "agent",
+        position: { x: r.position_x, y: r.position_y },
+        data: {
+          agent: def,
+          status: r.status,
+          findingsCount: findings.filter((f) => f.agent_run_id === r.id).length,
+          selected: selectedRunId === r.id,
+          onSelect: () => setSelectedRunId(r.id),
+        },
+      };
+    });
+  }, [runs, findings, selectedRunId, customAgents]);
 
   const edges: Edge[] = useMemo(() => {
-    // Recon is the "source"; everything else hangs off recon.
     const recon = runs.find((r) => r.agent_type === "recon");
     if (!recon) return [];
     return runs
@@ -144,6 +170,12 @@ function ScanDetail() {
   }, [runs]);
 
   const selectedRun = runs.find((r) => r.id === selectedRunId) ?? null;
+  const selectedRunWithCustom = selectedRun
+    ? {
+        ...selectedRun,
+        custom_agent: selectedRun.custom_agent_id ? customAgents[selectedRun.custom_agent_id] ?? null : null,
+      }
+    : null;
 
   const onNodeClick = useCallback((_: unknown, node: Node) => setSelectedRunId(node.id), []);
 
@@ -175,8 +207,7 @@ function ScanDetail() {
             <div>
               <div className="text-sm font-medium text-foreground">{scan?.name ?? "…"}</div>
               <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                {scan?.aws_account_alias || scan?.aws_account_id || "account pending"} ·{" "}
-                {scan?.region}
+                {scan?.aws_account_alias || scan?.aws_account_id || "account pending"} · {scan?.region}
               </div>
             </div>
           </div>
@@ -190,24 +221,14 @@ function ScanDetail() {
                 info: "text-severity-info",
               };
               return severityCounts[s] ? (
-                <Badge
-                  key={s}
-                  variant="outline"
-                  className={`font-mono text-[10px] uppercase ${cls[s]}`}
-                >
+                <Badge key={s} variant="outline" className={`font-mono text-[10px] uppercase ${cls[s]}`}>
                   {severityCounts[s]} {s}
                 </Badge>
               ) : null;
             })}
-            <Badge variant="outline" className="font-mono text-[10px] uppercase">
-              {scan?.status}
-            </Badge>
+            <Badge variant="outline" className="font-mono text-[10px] uppercase">{scan?.status}</Badge>
             {scan?.status === "complete" && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => generatePentestReport(scan as any, findings as any)}
-              >
+              <Button size="sm" variant="outline" onClick={() => generatePentestReport(scan as any, findings as any)}>
                 <Download className="mr-1.5 h-3.5 w-3.5" /> Download Report
               </Button>
             )}
@@ -231,7 +252,6 @@ function ScanDetail() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Canvas */}
         <div className="flex-1 relative">
           <ReactFlowProvider>
             <ReactFlow
@@ -251,35 +271,35 @@ function ScanDetail() {
           </ReactFlowProvider>
         </div>
 
-        {/* Side panel */}
         <aside className="flex w-[480px] flex-col border-l border-border bg-background">
-          <Tabs
-            value={tab}
-            onValueChange={(v) => setTab(v as "trace" | "findings")}
-            className="flex h-full flex-col"
-          >
+          <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="flex h-full flex-col">
             <div className="border-b border-border px-3 pt-2">
               <TabsList className="bg-transparent p-0 gap-1">
-                <TabsTrigger
-                  value="trace"
-                  className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border"
-                >
+                <TabsTrigger value="trace" className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border">
                   Agent trace
                 </TabsTrigger>
-                <TabsTrigger
-                  value="findings"
-                  className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border"
-                >
+                <TabsTrigger value="findings" className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border">
                   Findings · {findings.length}
                 </TabsTrigger>
+                {parentFindings && (
+                  <TabsTrigger value="drift" className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border">
+                    <GitCompare className="mr-1 h-3 w-3" />
+                    Drift
+                  </TabsTrigger>
+                )}
               </TabsList>
             </div>
             <TabsContent value="trace" className="flex-1 overflow-hidden m-0">
-              <AgentDetailPanel run={selectedRun} />
+              <AgentDetailPanel run={selectedRunWithCustom} />
             </TabsContent>
             <TabsContent value="findings" className="flex-1 overflow-auto m-0 p-3">
               <FindingsList findings={findings} />
             </TabsContent>
+            {parentFindings && (
+              <TabsContent value="drift" className="flex-1 overflow-auto m-0 p-3">
+                <DriftDiff current={findings} previous={parentFindings} />
+              </TabsContent>
+            )}
           </Tabs>
         </aside>
       </div>
