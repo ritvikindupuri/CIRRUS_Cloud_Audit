@@ -1,4 +1,9 @@
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
@@ -47,8 +52,8 @@ export function AwsSetupGuide() {
           Cirrus only needs <span className="font-mono text-foreground">List*</span>,{" "}
           <span className="font-mono text-foreground">Get*</span>, and{" "}
           <span className="font-mono text-foreground">Describe*</span> permissions — no writes, no
-          deletes. Your keys stay in your browser and are sent to our agents only for the duration of a
-          single scan. They are never written to disk on our side.
+          deletes. Your keys stay in your browser and are sent to our agents only for the duration
+          of a single scan. They are never written to disk on our side.
         </p>
       </div>
 
@@ -78,7 +83,8 @@ export function AwsSetupGuide() {
         <AccordionItem value="step-2">
           <AccordionTrigger className="px-3 text-sm">
             <span className="flex items-center gap-3">
-              <StepDot n={2} /> Create a user named <code className="font-mono text-foreground">cirrus-audit</code>
+              <StepDot n={2} /> Create a user named{" "}
+              <code className="font-mono text-foreground">cirrus-audit</code>
             </span>
           </AccordionTrigger>
           <AccordionContent className="px-3 pb-4 text-sm text-muted-foreground space-y-2">
@@ -100,8 +106,8 @@ export function AwsSetupGuide() {
           <AccordionContent className="px-3 pb-4 text-sm text-muted-foreground space-y-3">
             <p>
               Choose <strong className="text-foreground">Attach policies directly</strong> →{" "}
-              <strong className="text-foreground">Create policy</strong>, switch to the JSON tab, and
-              paste:
+              <strong className="text-foreground">Create policy</strong>, switch to the JSON tab,
+              and paste:
             </p>
             <div className="relative">
               <pre className="terminal max-h-72 overflow-auto pr-12 text-xs">{POLICY_JSON}</pre>
@@ -113,9 +119,9 @@ export function AwsSetupGuide() {
               </button>
             </div>
             <p>
-              Name the policy{" "}
-              <code className="font-mono text-foreground">CirrusReadOnlyAudit</code>, save it, then
-              attach it to the <code className="font-mono text-foreground">cirrus-audit</code> user.
+              Name the policy <code className="font-mono text-foreground">CirrusReadOnlyAudit</code>
+              , save it, then attach it to the{" "}
+              <code className="font-mono text-foreground">cirrus-audit</code> user.
             </p>
             <p className="text-xs">
               Prefer a managed policy? You can attach AWS-managed{" "}
@@ -140,8 +146,8 @@ export function AwsSetupGuide() {
             </p>
             <p>
               AWS will display the <code className="font-mono text-foreground">Access key ID</code>{" "}
-              and <code className="font-mono text-foreground">Secret access key</code> exactly once —
-              paste them into the form on the right.
+              and <code className="font-mono text-foreground">Secret access key</code> exactly once
+              — paste them into the form on the right.
             </p>
           </AccordionContent>
         </AccordionItem>
@@ -162,9 +168,8 @@ export function AwsSetupGuide() {
               automatically.
             </p>
             <pre className="terminal text-xs">
-              <span className="prompt">$ </span>aws sts assume-role \
-              {"\n"}    --role-arn arn:aws:iam::123456789012:role/CirrusAuditor \
-              {"\n"}    --role-session-name cirrus-scan
+              <span className="prompt">$ </span>aws sts assume-role \{"\n"} --role-arn
+              arn:aws:iam::123456789012:role/CirrusAuditor \{"\n"} --role-session-name cirrus-scan
             </pre>
           </AccordionContent>
         </AccordionItem>

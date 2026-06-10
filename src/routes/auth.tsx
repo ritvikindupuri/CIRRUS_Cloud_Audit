@@ -70,7 +70,9 @@ function AuthPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="px-6 py-5">
-        <Link to="/"><CirrusLogo /></Link>
+        <Link to="/">
+          <CirrusLogo />
+        </Link>
       </header>
       <main className="flex-1 flex items-center justify-center px-4">
         <div className="w-full max-w-md">
@@ -94,7 +96,24 @@ function AuthPage() {
               disabled={loading}
               className="w-full"
             >
-              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.75h3.55c2.08-1.92 3.29-4.74 3.29-8.08Z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.67l-3.55-2.75c-.98.66-2.24 1.05-3.73 1.05-2.87 0-5.3-1.94-6.16-4.55H2.18v2.84A11 11 0 0 0 12 23Z"/><path fill="currentColor" d="M5.84 14.08A6.61 6.61 0 0 1 5.48 12c0-.73.13-1.43.36-2.08V7.08H2.18a11 11 0 0 0 0 9.84l3.66-2.84Z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.07.56 4.21 1.64l3.15-3.15A11 11 0 0 0 2.18 7.08l3.66 2.84C6.7 7.31 9.13 5.38 12 5.38Z"/></svg>
+              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+                <path
+                  fill="currentColor"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.75h3.55c2.08-1.92 3.29-4.74 3.29-8.08Z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.67l-3.55-2.75c-.98.66-2.24 1.05-3.73 1.05-2.87 0-5.3-1.94-6.16-4.55H2.18v2.84A11 11 0 0 0 12 23Z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M5.84 14.08A6.61 6.61 0 0 1 5.48 12c0-.73.13-1.43.36-2.08V7.08H2.18a11 11 0 0 0 0 9.84l3.66-2.84Z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M12 5.38c1.62 0 3.07.56 4.21 1.64l3.15-3.15A11 11 0 0 0 2.18 7.08l3.66 2.84C6.7 7.31 9.13 5.38 12 5.38Z"
+                />
+              </svg>
               Continue with Google
             </Button>
 
@@ -106,7 +125,12 @@ function AuthPage() {
 
             <form onSubmit={handleEmail} className="space-y-3">
               <div>
-                <Label htmlFor="email" className="text-xs uppercase tracking-wider text-muted-foreground">Email</Label>
+                <Label
+                  htmlFor="email"
+                  className="text-xs uppercase tracking-wider text-muted-foreground"
+                >
+                  Email
+                </Label>
                 <Input
                   id="email"
                   type="email"
@@ -118,7 +142,12 @@ function AuthPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="password" className="text-xs uppercase tracking-wider text-muted-foreground">Password</Label>
+                <Label
+                  htmlFor="password"
+                  className="text-xs uppercase tracking-wider text-muted-foreground"
+                >
+                  Password
+                </Label>
                 <Input
                   id="password"
                   type="password"

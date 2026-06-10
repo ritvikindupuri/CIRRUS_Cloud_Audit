@@ -1,6 +1,13 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { ReactFlow, ReactFlowProvider, Background, Controls, type Node, type Edge } from "@xyflow/react";
+import {
+  ReactFlow,
+  ReactFlowProvider,
+  Background,
+  Controls,
+  type Node,
+  type Edge,
+} from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { supabase } from "@/integrations/supabase/client";
 import { AGENT_DEFINITIONS, type AgentType } from "@/lib/agents/definitions";
@@ -10,11 +17,12 @@ import { FindingsList } from "@/components/findings-list";
 import { CirrusLogo } from "@/components/cirrus-logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, RotateCw } from "lucide-react";
+import { ArrowLeft, RotateCw, Download } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { runScan } from "@/lib/scans.functions";
 import { loadCreds } from "@/lib/aws-creds";
 import { toast } from "sonner";
+import { generatePentestReport } from "@/lib/report-generator";
 
 interface ScanRow {
   id: string;
@@ -80,11 +88,23 @@ function ScanDetail() {
 
     const channel = supabase
       .channel(`scan:${scanId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "scans", filter: `id=eq.${scanId}` }, () => void load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "agent_runs", filter: `scan_id=eq.${scanId}` }, () => void load())
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "findings", filter: `scan_id=eq.${scanId}` }, (p) => {
-        setFindings((prev) => [...prev, p.new as FindingRow]);
-      })
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "scans", filter: `id=eq.${scanId}` },
+        () => void load(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "agent_runs", filter: `scan_id=eq.${scanId}` },
+        () => void load(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "findings", filter: `scan_id=eq.${scanId}` },
+        (p) => {
+          setFindings((prev) => [...prev, p.new as FindingRow]);
+        },
+      )
       .subscribe();
 
     return () => {
@@ -133,9 +153,9 @@ function ScanDetail() {
       toast.error("AWS credentials are no longer in this tab. Start a new scan to re-enter them.");
       return;
     }
-    void runScan({ data: { scanId, creds } }).then(() => toast.success("Scan re-dispatched")).catch((e) =>
-      toast.error(e instanceof Error ? e.message : "Failed"),
-    );
+    void runScan({ data: { scanId, creds } })
+      .then(() => toast.success("Scan re-dispatched"))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Failed"));
   }
 
   const severityCounts = findings.reduce<Record<string, number>>((acc, f) => {
@@ -148,17 +168,20 @@ function ScanDetail() {
       <header className="border-b border-border/60">
         <div className="flex items-center justify-between px-6 py-3">
           <div className="flex items-center gap-4">
-            <Link to="/dashboard"><CirrusLogo /></Link>
+            <Link to="/dashboard">
+              <CirrusLogo />
+            </Link>
             <span className="text-muted-foreground">/</span>
             <div>
               <div className="text-sm font-medium text-foreground">{scan?.name ?? "…"}</div>
               <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                {scan?.aws_account_alias || scan?.aws_account_id || "account pending"} · {scan?.region}
+                {scan?.aws_account_alias || scan?.aws_account_id || "account pending"} ·{" "}
+                {scan?.region}
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {(["critical","high","medium","low","info"] as const).map((s) => {
+            {(["critical", "high", "medium", "low", "info"] as const).map((s) => {
               const cls: Record<typeof s, string> = {
                 critical: "text-severity-critical",
                 high: "text-severity-high",
@@ -167,19 +190,36 @@ function ScanDetail() {
                 info: "text-severity-info",
               };
               return severityCounts[s] ? (
-                <Badge key={s} variant="outline" className={`font-mono text-[10px] uppercase ${cls[s]}`}>
+                <Badge
+                  key={s}
+                  variant="outline"
+                  className={`font-mono text-[10px] uppercase ${cls[s]}`}
+                >
                   {severityCounts[s]} {s}
                 </Badge>
               ) : null;
             })}
-            <Badge variant="outline" className="font-mono text-[10px] uppercase">{scan?.status}</Badge>
+            <Badge variant="outline" className="font-mono text-[10px] uppercase">
+              {scan?.status}
+            </Badge>
+            {scan?.status === "complete" && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => generatePentestReport(scan as any, findings as any)}
+              >
+                <Download className="mr-1.5 h-3.5 w-3.5" /> Download Report
+              </Button>
+            )}
             {scan?.status === "error" && (
               <Button size="sm" variant="outline" onClick={retry}>
                 <RotateCw className="mr-1.5 h-3.5 w-3.5" /> Retry
               </Button>
             )}
             <Link to="/dashboard">
-              <Button size="sm" variant="ghost"><ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Scans</Button>
+              <Button size="sm" variant="ghost">
+                <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Scans
+              </Button>
             </Link>
           </div>
         </div>
@@ -213,13 +253,23 @@ function ScanDetail() {
 
         {/* Side panel */}
         <aside className="flex w-[480px] flex-col border-l border-border bg-background">
-          <Tabs value={tab} onValueChange={(v) => setTab(v as "trace" | "findings")} className="flex h-full flex-col">
+          <Tabs
+            value={tab}
+            onValueChange={(v) => setTab(v as "trace" | "findings")}
+            className="flex h-full flex-col"
+          >
             <div className="border-b border-border px-3 pt-2">
               <TabsList className="bg-transparent p-0 gap-1">
-                <TabsTrigger value="trace" className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border">
+                <TabsTrigger
+                  value="trace"
+                  className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border"
+                >
                   Agent trace
                 </TabsTrigger>
-                <TabsTrigger value="findings" className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border">
+                <TabsTrigger
+                  value="findings"
+                  className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border"
+                >
                   Findings · {findings.length}
                 </TabsTrigger>
               </TabsList>

@@ -42,7 +42,12 @@ export function AgentDetailPanel({ run }: { run: Run | null }) {
       .channel(`steps:${run.id}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "agent_steps", filter: `agent_run_id=eq.${run.id}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "agent_steps",
+          filter: `agent_run_id=eq.${run.id}`,
+        },
         (payload) => setSteps((prev) => [...prev, payload.new as Step]),
       )
       .subscribe();
@@ -53,7 +58,15 @@ export function AgentDetailPanel({ run }: { run: Run | null }) {
 
   const merged = useMemo(() => {
     // Pair tool_call with tool_result by tool_name + nearest later result.
-    const out: { kind: string; thought?: string; tool_name?: string; command?: string; result?: unknown; error?: string; id: string }[] = [];
+    const out: {
+      kind: string;
+      thought?: string;
+      tool_name?: string;
+      command?: string;
+      result?: unknown;
+      error?: string;
+      id: string;
+    }[] = [];
     const sorted = [...steps].sort((a, b) => a.step_index - b.step_index);
     for (let i = 0; i < sorted.length; i++) {
       const s = sorted[i];
@@ -71,7 +84,12 @@ export function AgentDetailPanel({ run }: { run: Run | null }) {
           out.push({ kind: "tool", tool_name: s.tool_name ?? "", command: cmd, id: s.id });
         }
       } else if (s.kind === "final") {
-        out.push({ kind: "final", thought: s.thought ?? "", error: s.error ?? undefined, id: s.id });
+        out.push({
+          kind: "final",
+          thought: s.thought ?? "",
+          error: s.error ?? undefined,
+          id: s.id,
+        });
       }
     }
     return out;
@@ -131,7 +149,9 @@ export function AgentDetailPanel({ run }: { run: Run | null }) {
                   {m.error ? (
                     <p className="text-sm text-destructive">{m.error}</p>
                   ) : (
-                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{m.thought}</p>
+                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                      {m.thought}
+                    </p>
                   )}
                 </div>
               );
@@ -144,21 +164,34 @@ export function AgentDetailPanel({ run }: { run: Run | null }) {
                   onClick={() => setExpanded((p) => ({ ...p, [m.id]: !isOpen }))}
                   className="flex w-full items-center gap-2 px-3 py-2 text-left"
                 >
-                  <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${isOpen ? "rotate-90" : ""}`} />
+                  <ChevronRight
+                    className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${isOpen ? "rotate-90" : ""}`}
+                  />
                   <Terminal className="h-3.5 w-3.5 text-primary" />
-                  <span className="font-mono text-[12px] text-foreground truncate">{m.tool_name}</span>
+                  <span className="font-mono text-[12px] text-foreground truncate">
+                    {m.tool_name}
+                  </span>
                 </button>
                 {isOpen && (
                   <div className="space-y-2 border-t border-border px-3 py-2">
                     <div>
-                      <div className="mb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Command</div>
-                      <pre className="terminal text-[12px]"><span className="prompt">$ </span>{m.command}</pre>
+                      <div className="mb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                        Command
+                      </div>
+                      <pre className="terminal text-[12px]">
+                        <span className="prompt">$ </span>
+                        {m.command}
+                      </pre>
                     </div>
                     {m.result !== undefined && (
                       <div>
-                        <div className="mb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Output</div>
+                        <div className="mb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                          Output
+                        </div>
                         <pre className="terminal max-h-72 overflow-auto text-[11.5px]">
-                          {typeof m.result === "string" ? m.result : JSON.stringify(m.result, null, 2)}
+                          {typeof m.result === "string"
+                            ? m.result
+                            : JSON.stringify(m.result, null, 2)}
                         </pre>
                       </div>
                     )}

@@ -79,13 +79,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Cirrus — Autonomous red-team agents for AWS" },
-      { name: "description", content: "Cirrus runs a fleet of autonomous LLM agents against your AWS account and shows every command, every output, every finding, live." },
+      {
+        name: "description",
+        content:
+          "Cirrus runs a fleet of autonomous LLM agents against your AWS account and shows every command, every output, every finding, live.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [
-      { rel: "stylesheet", href: appCss },
-    ],
+    links: [{ rel: "stylesheet", href: appCss }],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -115,16 +117,20 @@ function RootComponent() {
     if (typeof window === "undefined") return;
     // Lazy import to avoid SSR pulling supabase
     import("@/integrations/supabase/client").then(({ supabase }) => {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((event) => {
         if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
         void router.invalidate();
         if (event !== "SIGNED_OUT") void queryClient.invalidateQueries();
       });
       // store cleanup on a global
-      (window as unknown as { __cirrusAuthSub?: { unsubscribe: () => void } }).__cirrusAuthSub = subscription;
+      (window as unknown as { __cirrusAuthSub?: { unsubscribe: () => void } }).__cirrusAuthSub =
+        subscription;
     });
     return () => {
-      const sub = (window as unknown as { __cirrusAuthSub?: { unsubscribe: () => void } }).__cirrusAuthSub;
+      const sub = (window as unknown as { __cirrusAuthSub?: { unsubscribe: () => void } })
+        .__cirrusAuthSub;
       sub?.unsubscribe();
     };
   }, [queryClient, router]);

@@ -33,7 +33,9 @@ function Dashboard() {
     async function load() {
       const { data } = await supabase
         .from("scans")
-        .select("id, name, aws_account_id, aws_account_alias, region, status, created_at, selected_agents")
+        .select(
+          "id, name, aws_account_id, aws_account_alias, region, status, created_at, selected_agents",
+        )
         .order("created_at", { ascending: false });
       if (active) {
         setScans((data ?? []) as Scan[]);
@@ -63,10 +65,14 @@ function Dashboard() {
     <div className="min-h-screen">
       <header className="border-b border-border/60">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link to="/dashboard"><CirrusLogo /></Link>
+          <Link to="/dashboard">
+            <CirrusLogo />
+          </Link>
           <div className="flex items-center gap-2">
             <Link to="/scans/new">
-              <Button size="sm"><Plus className="mr-1.5 h-3.5 w-3.5" /> New scan</Button>
+              <Button size="sm">
+                <Plus className="mr-1.5 h-3.5 w-3.5" /> New scan
+              </Button>
             </Link>
             <Button size="sm" variant="ghost" onClick={signOut}>
               <LogOut className="h-4 w-4" />
@@ -93,7 +99,9 @@ function Dashboard() {
           <div className="rounded-lg border border-dashed border-border p-16 text-center">
             <p className="text-sm text-muted-foreground">No scans yet.</p>
             <Link to="/scans/new" className="mt-4 inline-block">
-              <Button><Plus className="mr-1.5 h-4 w-4" /> Start your first scan</Button>
+              <Button>
+                <Plus className="mr-1.5 h-4 w-4" /> Start your first scan
+              </Button>
             </Link>
           </div>
         ) : (
@@ -111,19 +119,26 @@ function Dashboard() {
               </thead>
               <tbody>
                 {scans.map((s) => (
-                  <tr key={s.id} className="border-b border-border last:border-0 hover:bg-surface/60 cursor-pointer"
-                    onClick={() => navigate({ to: "/scans/$scanId", params: { scanId: s.id } })}>
+                  <tr
+                    key={s.id}
+                    className="border-b border-border last:border-0 hover:bg-surface/60 cursor-pointer"
+                    onClick={() => navigate({ to: "/scans/$scanId", params: { scanId: s.id } })}
+                  >
                     <td className="px-4 py-3">
                       <div className="font-medium text-foreground">{s.name}</div>
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                       {s.aws_account_alias || s.aws_account_id || "—"}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{s.region}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                      {s.region}
+                    </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">
                       {(s.selected_agents ?? []).join(", ")}
                     </td>
-                    <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={s.status} />
+                    </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(s.created_at), { addSuffix: true })}
                     </td>
@@ -139,7 +154,10 @@ function Dashboard() {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; cls: string }> = {
+  const map: Record<
+    string,
+    { label: string; icon: React.ComponentType<{ className?: string }>; cls: string }
+  > = {
     pending: { label: "Queued", icon: Clock, cls: "text-muted-foreground" },
     running: { label: "Running", icon: Loader2, cls: "text-primary" },
     complete: { label: "Complete", icon: Check, cls: "text-emerald-400" },
