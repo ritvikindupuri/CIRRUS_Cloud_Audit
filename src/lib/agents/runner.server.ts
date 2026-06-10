@@ -710,7 +710,7 @@ export async function runAgent(params: {
     .update({ status: "running", started_at: new Date().toISOString() })
     .eq("id", agentRunId);
 
-  let tools: ReturnType<typeof makeReconTools>;
+  let tools: ToolSet;
   let system: string;
   if (agentType === "custom") {
     if (!customAgent) throw new Error("Custom agent config missing");
