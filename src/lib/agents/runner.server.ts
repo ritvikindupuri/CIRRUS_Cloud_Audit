@@ -31,7 +31,7 @@ import {
 } from "@aws-sdk/client-ec2";
 
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
-import type { AgentType } from "@/lib/agents/definitions";
+import type { AgentType, BuiltinAgentType, AwsService } from "@/lib/agents/definitions";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface AwsCredsInput {
