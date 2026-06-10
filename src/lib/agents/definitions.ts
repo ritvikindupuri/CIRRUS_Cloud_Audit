@@ -1,19 +1,31 @@
 // Client-safe agent metadata. No AWS / LLM imports here so this can be
 // imported from React components.
 
-export type AgentType = "recon" | "iam" | "s3" | "ec2" | "custom";
+export type BuiltinAgentType = "recon" | "iam" | "s3" | "ec2";
+export type AgentType = BuiltinAgentType | "custom";
 
 export const AWS_SERVICE_OPTIONS = ["sts", "iam", "s3", "ec2"] as const;
 export type AwsService = (typeof AWS_SERVICE_OPTIONS)[number];
 
-export const CUSTOM_AGENT_DEFINITION = {
-  type: "custom" as AgentType,
+export const CUSTOM_AGENT_DEFINITION: AgentDefinition = {
+  type: "custom",
   name: "Custom Agent",
   tagline: "User-defined check",
   description: "A user-authored agent with a custom system prompt and AWS tool whitelist.",
   colorVar: "#a78bfa",
-  icon: "radar" as const,
+  icon: "radar",
 };
+
+export interface AgentDefinition {
+  type: AgentType;
+  name: string;
+  tagline: string;
+  description: string;
+  colorVar: string;
+  icon: "radar" | "key" | "bucket" | "network";
+}
+
+export const AGENT_DEFINITIONS: Record<BuiltinAgentType, AgentDefinition> = {
 
 export interface AgentDefinition {
   type: AgentType;
