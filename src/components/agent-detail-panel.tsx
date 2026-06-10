@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { AGENT_DEFINITIONS, type AgentType } from "@/lib/agents/definitions";
+import { getAgentDefinition, type AgentType } from "@/lib/agents/definitions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { ChevronRight, Terminal } from "lucide-react";
