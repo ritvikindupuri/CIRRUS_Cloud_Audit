@@ -19,6 +19,7 @@ export type Database = {
           agent_type: string
           completed_at: string | null
           created_at: string
+          custom_agent_id: string | null
           id: string
           position_x: number
           position_y: number
@@ -31,6 +32,7 @@ export type Database = {
           agent_type: string
           completed_at?: string | null
           created_at?: string
+          custom_agent_id?: string | null
           id?: string
           position_x?: number
           position_y?: number
@@ -43,6 +45,7 @@ export type Database = {
           agent_type?: string
           completed_at?: string | null
           created_at?: string
+          custom_agent_id?: string | null
           id?: string
           position_x?: number
           position_y?: number
@@ -108,6 +111,39 @@ export type Database = {
           },
         ]
       }
+      custom_agents: {
+        Row: {
+          color: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          services: string[]
+          system_prompt: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          services?: string[]
+          system_prompt: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          services?: string[]
+          system_prompt?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       findings: {
         Row: {
           agent_run_id: string | null
@@ -115,6 +151,7 @@ export type Database = {
           description: string | null
           evidence: Json | null
           id: string
+          remediation: Json | null
           resource: string | null
           scan_id: string
           severity: string
@@ -126,6 +163,7 @@ export type Database = {
           description?: string | null
           evidence?: Json | null
           id?: string
+          remediation?: Json | null
           resource?: string | null
           scan_id: string
           severity: string
@@ -137,6 +175,7 @@ export type Database = {
           description?: string | null
           evidence?: Json | null
           id?: string
+          remediation?: Json | null
           resource?: string | null
           scan_id?: string
           severity?: string
@@ -186,10 +225,13 @@ export type Database = {
           aws_account_id: string | null
           completed_at: string | null
           created_at: string
+          custom_agent_ids: string[]
           error_message: string | null
           id: string
           name: string
+          parent_scan_id: string | null
           region: string
+          scheduled_scan_id: string | null
           selected_agents: string[]
           started_at: string | null
           status: string
@@ -200,10 +242,13 @@ export type Database = {
           aws_account_id?: string | null
           completed_at?: string | null
           created_at?: string
+          custom_agent_ids?: string[]
           error_message?: string | null
           id?: string
           name: string
+          parent_scan_id?: string | null
           region?: string
+          scheduled_scan_id?: string | null
           selected_agents?: string[]
           started_at?: string | null
           status?: string
@@ -214,13 +259,55 @@ export type Database = {
           aws_account_id?: string | null
           completed_at?: string | null
           created_at?: string
+          custom_agent_ids?: string[]
           error_message?: string | null
           id?: string
           name?: string
+          parent_scan_id?: string | null
           region?: string
+          scheduled_scan_id?: string | null
           selected_agents?: string[]
           started_at?: string | null
           status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      scheduled_scans: {
+        Row: {
+          cadence_days: number
+          created_at: string
+          custom_agent_ids: string[]
+          id: string
+          last_run_scan_id: string | null
+          name: string
+          next_run_at: string
+          region: string
+          selected_agents: string[]
+          user_id: string
+        }
+        Insert: {
+          cadence_days?: number
+          created_at?: string
+          custom_agent_ids?: string[]
+          id?: string
+          last_run_scan_id?: string | null
+          name: string
+          next_run_at?: string
+          region?: string
+          selected_agents?: string[]
+          user_id: string
+        }
+        Update: {
+          cadence_days?: number
+          created_at?: string
+          custom_agent_ids?: string[]
+          id?: string
+          last_run_scan_id?: string | null
+          name?: string
+          next_run_at?: string
+          region?: string
+          selected_agents?: string[]
           user_id?: string
         }
         Relationships: []
