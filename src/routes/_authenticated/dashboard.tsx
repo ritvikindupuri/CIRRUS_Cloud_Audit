@@ -33,19 +33,28 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function Dashboard() {
   const navigate = useNavigate();
   const [scans, setScans] = useState<Scan[]>([]);
+  const [dueSchedules, setDueSchedules] = useState<DueSchedule[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     async function load() {
-      const { data } = await supabase
-        .from("scans")
-        .select(
-          "id, name, aws_account_id, aws_account_alias, region, status, created_at, selected_agents",
-        )
-        .order("created_at", { ascending: false });
+      const [{ data: scanData }, { data: schedData }] = await Promise.all([
+        supabase
+          .from("scans")
+          .select(
+            "id, name, aws_account_id, aws_account_alias, region, status, created_at, selected_agents",
+          )
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("scheduled_scans")
+          .select("id, name, region, next_run_at")
+          .lte("next_run_at", new Date().toISOString())
+          .order("next_run_at"),
+      ]);
       if (active) {
-        setScans((data ?? []) as Scan[]);
+        setScans((scanData ?? []) as Scan[]);
+        setDueSchedules((schedData ?? []) as DueSchedule[]);
         setLoading(false);
       }
     }
@@ -53,9 +62,8 @@ function Dashboard() {
 
     const channel = supabase
       .channel("scans:list")
-      .on("postgres_changes", { event: "*", schema: "public", table: "scans" }, () => {
-        void load();
-      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "scans" }, () => void load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "scheduled_scans" }, () => void load())
       .subscribe();
     return () => {
       active = false;
