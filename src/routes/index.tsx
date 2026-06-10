@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { CirrusLogo } from "@/components/cirrus-logo";
 import { ArrowRight } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 
 export const Route = createFileRoute("/")({
   head: () => ({
