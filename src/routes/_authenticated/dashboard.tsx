@@ -4,8 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CirrusLogo } from "@/components/cirrus-logo";
-import { Plus, LogOut, Clock, Check, AlertCircle, Loader2 } from "lucide-react";
+import { Plus, LogOut, Clock, Check, AlertCircle, Loader2, Beaker, Calendar } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+
+interface DueSchedule {
+  id: string;
+  name: string;
+  region: string;
+  next_run_at: string;
+}
 
 interface Scan {
   id: string;
