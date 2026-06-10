@@ -73,7 +73,7 @@ function Landing() {
           className="max-w-4xl mx-auto flex flex-col items-center"
         >
           <motion.div variants={itemVariants} className="mb-12">
-            <CirrusLogo size={120} withWordmark={false} className="opacity-90 scale-110" />
+            <CirrusLogo size={120} withWordmark={false} className="opacity-90 scale-110" isometric={true} />
           </motion.div>
 
           <motion.h1

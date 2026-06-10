@@ -4,9 +4,10 @@ interface Props {
   size?: number;
   withWordmark?: boolean;
   className?: string;
+  isometric?: boolean;
 }
 
-export function CirrusLogo({ size = 28, withWordmark = true, className = "" }: Props) {
+export function CirrusLogo({ size = 28, withWordmark = true, className = "", isometric = false }: Props) {
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
       <img
@@ -14,8 +15,14 @@ export function CirrusLogo({ size = 28, withWordmark = true, className = "" }: P
         alt="Cirrus logo"
         width={size}
         height={size}
-        style={{ width: size, height: size }}
-        className="object-contain dark:invert"
+        style={{
+          width: size,
+          height: size,
+          transform: isometric ? "rotateX(55deg) rotateZ(-45deg)" : "none",
+          boxShadow: isometric ? "-10px 20px 20px rgba(0, 0, 0, 0.2)" : "none",
+          transition: "transform 0.3s ease, box-shadow 0.3s ease"
+        }}
+        className={`object-contain dark:invert`}
         loading="lazy"
       />
       {withWordmark && (
