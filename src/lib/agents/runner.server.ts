@@ -607,7 +607,7 @@ function makeEc2Tools(ctx: RunCtx) {
 
 // ─── System prompts ────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPTS: Record<AgentType, string> = {
+const SYSTEM_PROMPTS: Record<BuiltinAgentType, string> = {
   recon: `You are the RECON agent inside Cirrus, an autonomous AWS pentest platform.
 Your job: confirm the identity of the credentials, list enabled regions, fetch the account summary, and surface high-level posture issues.
 
