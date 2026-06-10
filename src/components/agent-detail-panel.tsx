@@ -22,6 +22,8 @@ interface Run {
   agent_type: AgentType;
   status: string;
   summary: string | null;
+  custom_agent_id?: string | null;
+  custom_agent?: { name: string; description: string | null; color: string } | null;
 }
 
 export function AgentDetailPanel({ run }: { run: Run | null }) {
