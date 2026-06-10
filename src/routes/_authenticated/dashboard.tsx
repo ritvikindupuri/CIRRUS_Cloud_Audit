@@ -84,6 +84,16 @@ function Dashboard() {
             <CirrusLogo />
           </Link>
           <div className="flex items-center gap-2">
+            <Link to="/agents">
+              <Button size="sm" variant="ghost">
+                <Beaker className="mr-1.5 h-3.5 w-3.5" /> Custom agents
+              </Button>
+            </Link>
+            <Link to="/schedules">
+              <Button size="sm" variant="ghost">
+                <Calendar className="mr-1.5 h-3.5 w-3.5" /> Schedules
+              </Button>
+            </Link>
             <Link to="/scans/new">
               <Button size="sm">
                 <Plus className="mr-1.5 h-3.5 w-3.5" /> New scan
@@ -95,6 +105,27 @@ function Dashboard() {
           </div>
         </div>
       </header>
+
+      {dueSchedules.length > 0 && (
+        <div className="border-b border-primary/40 bg-primary/5">
+          <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+            <div className="flex items-center gap-2 text-sm">
+              <AlertCircle className="h-4 w-4 text-primary" />
+              <span className="font-medium">
+                {dueSchedules.length} drift check{dueSchedules.length === 1 ? "" : "s"} due
+              </span>
+              <span className="text-muted-foreground truncate">
+                — {dueSchedules.map((s) => s.name).join(", ")}
+              </span>
+            </div>
+            <Link to="/schedules">
+              <Button size="sm" variant="outline">
+                Review schedules
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
 
       <main className="mx-auto max-w-6xl px-6 py-10">
         <div className="mb-8 flex items-end justify-between">
