@@ -33,16 +33,23 @@ export function FindingsList({ findings }: { findings: Finding[] }) {
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className={`font-mono text-[10px] uppercase ${SEV_CLASS[f.severity]}`}>
+                <Badge
+                  variant="outline"
+                  className={`font-mono text-[10px] uppercase ${SEV_CLASS[f.severity]}`}
+                >
                   {f.severity}
                 </Badge>
                 <span className="text-sm font-medium text-foreground truncate">{f.title}</span>
               </div>
               {f.resource && (
-                <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">{f.resource}</div>
+                <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
+                  {f.resource}
+                </div>
               )}
               {f.description && (
-                <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">{f.description}</p>
+                <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+                  {f.description}
+                </p>
               )}
             </div>
           </div>

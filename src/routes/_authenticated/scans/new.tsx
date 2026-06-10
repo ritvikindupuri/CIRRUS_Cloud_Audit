@@ -5,10 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CirrusLogo } from "@/components/cirrus-logo";
 import { AwsSetupGuide } from "@/components/aws-setup-guide";
-import { AGENT_DEFINITIONS, AGENT_ORDER, AWS_REGIONS, type AgentType } from "@/lib/agents/definitions";
+import {
+  AGENT_DEFINITIONS,
+  AGENT_ORDER,
+  AWS_REGIONS,
+  type AgentType,
+} from "@/lib/agents/definitions";
 import { saveCreds } from "@/lib/aws-creds";
 import { runScan } from "@/lib/scans.functions";
 import { ArrowLeft, Play, ShieldAlert } from "lucide-react";
@@ -27,7 +38,10 @@ function NewScan() {
   const [sessionToken, setSessionToken] = useState("");
   const [region, setRegion] = useState("us-east-1");
   const [selected, setSelected] = useState<Record<AgentType, boolean>>({
-    recon: true, iam: true, s3: true, ec2: true,
+    recon: true,
+    iam: true,
+    s3: true,
+    ec2: true,
   });
   const [launching, setLaunching] = useState(false);
 
@@ -38,7 +52,8 @@ function NewScan() {
   async function launch() {
     const agents = AGENT_ORDER.filter((t) => selected[t]);
     if (agents.length === 0) return toast.error("Pick at least one agent.");
-    if (!accessKeyId || !secretAccessKey) return toast.error("AWS access key and secret are required.");
+    if (!accessKeyId || !secretAccessKey)
+      return toast.error("AWS access key and secret are required.");
     if (!name.trim()) return toast.error("Give this scan a name.");
 
     setLaunching(true);
@@ -101,13 +116,17 @@ function NewScan() {
       <header className="border-b border-border/60">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-4">
-            <Link to="/dashboard"><CirrusLogo /></Link>
+            <Link to="/dashboard">
+              <CirrusLogo />
+            </Link>
             <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
               › new scan
             </span>
           </div>
           <Link to="/dashboard">
-            <Button size="sm" variant="ghost"><ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Back</Button>
+            <Button size="sm" variant="ghost">
+              <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Back
+            </Button>
           </Link>
         </div>
       </header>
@@ -129,15 +148,34 @@ function NewScan() {
               <h3 className="text-sm font-semibold">Scan details</h3>
               <div className="mt-4 space-y-4">
                 <div>
-                  <Label htmlFor="name" className="text-xs uppercase tracking-wider text-muted-foreground">Scan name</Label>
-                  <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="prod-acct weekly" className="mt-1 font-mono text-sm" />
+                  <Label
+                    htmlFor="name"
+                    className="text-xs uppercase tracking-wider text-muted-foreground"
+                  >
+                    Scan name
+                  </Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="prod-acct weekly"
+                    className="mt-1 font-mono text-sm"
+                  />
                 </div>
                 <div>
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Primary region</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Primary region
+                  </Label>
                   <Select value={region} onValueChange={setRegion}>
-                    <SelectTrigger className="mt-1 font-mono"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="mt-1 font-mono">
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
-                      {AWS_REGIONS.map((r) => <SelectItem key={r} value={r} className="font-mono">{r}</SelectItem>)}
+                      {AWS_REGIONS.map((r) => (
+                        <SelectItem key={r} value={r} className="font-mono">
+                          {r}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -151,23 +189,62 @@ function NewScan() {
               </p>
               <div className="mt-4 space-y-3">
                 <div>
-                  <Label htmlFor="ak" className="text-xs uppercase tracking-wider text-muted-foreground">Access key ID</Label>
-                  <Input id="ak" value={accessKeyId} onChange={(e) => setAccessKeyId(e.target.value)} placeholder="AKIA…" autoComplete="off" className="mt-1 font-mono text-sm" />
+                  <Label
+                    htmlFor="ak"
+                    className="text-xs uppercase tracking-wider text-muted-foreground"
+                  >
+                    Access key ID
+                  </Label>
+                  <Input
+                    id="ak"
+                    value={accessKeyId}
+                    onChange={(e) => setAccessKeyId(e.target.value)}
+                    placeholder="AKIA…"
+                    autoComplete="off"
+                    className="mt-1 font-mono text-sm"
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="sk" className="text-xs uppercase tracking-wider text-muted-foreground">Secret access key</Label>
-                  <Input id="sk" type="password" value={secretAccessKey} onChange={(e) => setSecretAccessKey(e.target.value)} autoComplete="off" className="mt-1 font-mono text-sm" />
+                  <Label
+                    htmlFor="sk"
+                    className="text-xs uppercase tracking-wider text-muted-foreground"
+                  >
+                    Secret access key
+                  </Label>
+                  <Input
+                    id="sk"
+                    type="password"
+                    value={secretAccessKey}
+                    onChange={(e) => setSecretAccessKey(e.target.value)}
+                    autoComplete="off"
+                    className="mt-1 font-mono text-sm"
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="st" className="text-xs uppercase tracking-wider text-muted-foreground">Session token <span className="ml-1 normal-case tracking-normal">(optional, for STS temp creds)</span></Label>
-                  <Input id="st" type="password" value={sessionToken} onChange={(e) => setSessionToken(e.target.value)} autoComplete="off" className="mt-1 font-mono text-sm" />
+                  <Label
+                    htmlFor="st"
+                    className="text-xs uppercase tracking-wider text-muted-foreground"
+                  >
+                    Session token{" "}
+                    <span className="ml-1 normal-case tracking-normal">
+                      (optional, for STS temp creds)
+                    </span>
+                  </Label>
+                  <Input
+                    id="st"
+                    type="password"
+                    value={sessionToken}
+                    onChange={(e) => setSessionToken(e.target.value)}
+                    autoComplete="off"
+                    className="mt-1 font-mono text-sm"
+                  />
                 </div>
               </div>
               <div className="mt-4 flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
                 <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
                 <span>
-                  We strongly recommend a dedicated IAM user with only the policy from the setup guide.
-                  Don't paste your root keys.
+                  We strongly recommend a dedicated IAM user with only the policy from the setup
+                  guide. Don't paste your root keys.
                 </span>
               </div>
             </section>
@@ -181,16 +258,27 @@ function NewScan() {
                     <label
                       key={t}
                       className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors ${
-                        selected[t] ? "border-primary/60 bg-primary/5" : "border-border hover:border-border/80"
+                        selected[t]
+                          ? "border-primary/60 bg-primary/5"
+                          : "border-border hover:border-border/80"
                       }`}
                     >
-                      <Checkbox checked={selected[t]} onCheckedChange={() => toggle(t)} className="mt-0.5" />
+                      <Checkbox
+                        checked={selected[t]}
+                        onCheckedChange={() => toggle(t)}
+                        className="mt-0.5"
+                      />
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: a.colorVar }} />
+                          <span
+                            className="inline-block h-2 w-2 rounded-full"
+                            style={{ backgroundColor: a.colorVar }}
+                          />
                           <span className="text-sm font-medium text-foreground">{a.name}</span>
                         </div>
-                        <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">{a.tagline}</p>
+                        <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
+                          {a.tagline}
+                        </p>
                       </div>
                     </label>
                   );

@@ -121,15 +121,24 @@ function summarize<T>(value: T, max = 2000): T | string {
 function makeReconTools(ctx: RunCtx) {
   return {
     aws_sts_get_caller_identity: tool({
-      description: "STS GetCallerIdentity — returns the AWS account, IAM ARN, and user/role ID for the configured credentials.",
+      description:
+        "STS GetCallerIdentity — returns the AWS account, IAM ARN, and user/role ID for the configured credentials.",
       inputSchema: z.object({}),
       execute: async () => {
         const cmd = "aws sts get-caller-identity";
-        await logStep(ctx, { kind: "tool_call", tool_name: "aws_sts_get_caller_identity", tool_input: { command: cmd } });
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_sts_get_caller_identity",
+          tool_input: { command: cmd },
+        });
         const client = new STSClient(awsConfig(ctx.creds));
         const out = await client.send(new GetCallerIdentityCommand({}));
         const result = { Account: out.Account, Arn: out.Arn, UserId: out.UserId };
-        await logStep(ctx, { kind: "tool_result", tool_name: "aws_sts_get_caller_identity", tool_output: { command: cmd, result } });
+        await logStep(ctx, {
+          kind: "tool_result",
+          tool_name: "aws_sts_get_caller_identity",
+          tool_output: { command: cmd, result },
+        });
         return result;
       },
     }),
@@ -138,11 +147,19 @@ function makeReconTools(ctx: RunCtx) {
       inputSchema: z.object({}),
       execute: async () => {
         const cmd = "aws iam list-account-aliases";
-        await logStep(ctx, { kind: "tool_call", tool_name: "aws_iam_list_account_aliases", tool_input: { command: cmd } });
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_iam_list_account_aliases",
+          tool_input: { command: cmd },
+        });
         const client = new IAMClient(awsConfig(ctx.creds));
         const out = await client.send(new ListAccountAliasesCommand({}));
         const result = { AccountAliases: out.AccountAliases ?? [] };
-        await logStep(ctx, { kind: "tool_result", tool_name: "aws_iam_list_account_aliases", tool_output: { command: cmd, result } });
+        await logStep(ctx, {
+          kind: "tool_result",
+          tool_name: "aws_iam_list_account_aliases",
+          tool_output: { command: cmd, result },
+        });
         return result;
       },
     }),
@@ -151,26 +168,46 @@ function makeReconTools(ctx: RunCtx) {
       inputSchema: z.object({}),
       execute: async () => {
         const cmd = "aws ec2 describe-regions --all-regions";
-        await logStep(ctx, { kind: "tool_call", tool_name: "aws_ec2_describe_regions", tool_input: { command: cmd } });
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_ec2_describe_regions",
+          tool_input: { command: cmd },
+        });
         const client = new EC2Client(awsConfig(ctx.creds));
         const out = await client.send(new DescribeRegionsCommand({ AllRegions: true }));
         const result = {
-          Regions: (out.Regions ?? []).map((r) => ({ RegionName: r.RegionName, OptInStatus: r.OptInStatus })),
+          Regions: (out.Regions ?? []).map((r) => ({
+            RegionName: r.RegionName,
+            OptInStatus: r.OptInStatus,
+          })),
         };
-        await logStep(ctx, { kind: "tool_result", tool_name: "aws_ec2_describe_regions", tool_output: { command: cmd, result } });
+        await logStep(ctx, {
+          kind: "tool_result",
+          tool_name: "aws_ec2_describe_regions",
+          tool_output: { command: cmd, result },
+        });
         return result;
       },
     }),
     aws_iam_get_account_summary: tool({
-      description: "IAM GetAccountSummary — counts of users, roles, MFA devices, and account-level posture.",
+      description:
+        "IAM GetAccountSummary — counts of users, roles, MFA devices, and account-level posture.",
       inputSchema: z.object({}),
       execute: async () => {
         const cmd = "aws iam get-account-summary";
-        await logStep(ctx, { kind: "tool_call", tool_name: "aws_iam_get_account_summary", tool_input: { command: cmd } });
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_iam_get_account_summary",
+          tool_input: { command: cmd },
+        });
         const client = new IAMClient(awsConfig(ctx.creds));
         const out = await client.send(new GetAccountSummaryCommand({}));
         const result = { SummaryMap: out.SummaryMap };
-        await logStep(ctx, { kind: "tool_result", tool_name: "aws_iam_get_account_summary", tool_output: { command: cmd, result } });
+        await logStep(ctx, {
+          kind: "tool_result",
+          tool_name: "aws_iam_get_account_summary",
+          tool_output: { command: cmd, result },
+        });
         return result;
       },
     }),
@@ -197,7 +234,11 @@ function makeIamTools(ctx: RunCtx) {
       inputSchema: z.object({}),
       execute: async () => {
         const cmd = "aws iam list-users";
-        await logStep(ctx, { kind: "tool_call", tool_name: "aws_iam_list_users", tool_input: { command: cmd } });
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_iam_list_users",
+          tool_input: { command: cmd },
+        });
         const client = new IAMClient(awsConfig(ctx.creds));
         const out = await client.send(new ListUsersCommand({}));
         const result = {
@@ -208,7 +249,11 @@ function makeIamTools(ctx: RunCtx) {
             PasswordLastUsed: u.PasswordLastUsed,
           })),
         };
-        await logStep(ctx, { kind: "tool_result", tool_name: "aws_iam_list_users", tool_output: { command: cmd, result: summarize(result) } });
+        await logStep(ctx, {
+          kind: "tool_result",
+          tool_name: "aws_iam_list_users",
+          tool_output: { command: cmd, result: summarize(result) },
+        });
         return result;
       },
     }),
@@ -217,7 +262,11 @@ function makeIamTools(ctx: RunCtx) {
       inputSchema: z.object({}),
       execute: async () => {
         const cmd = "aws iam list-roles";
-        await logStep(ctx, { kind: "tool_call", tool_name: "aws_iam_list_roles", tool_input: { command: cmd } });
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_iam_list_roles",
+          tool_input: { command: cmd },
+        });
         const client = new IAMClient(awsConfig(ctx.creds));
         const out = await client.send(new ListRolesCommand({}));
         const result = {
@@ -227,7 +276,11 @@ function makeIamTools(ctx: RunCtx) {
             CreateDate: r.CreateDate,
           })),
         };
-        await logStep(ctx, { kind: "tool_result", tool_name: "aws_iam_list_roles", tool_output: { command: cmd, result: summarize(result) } });
+        await logStep(ctx, {
+          kind: "tool_result",
+          tool_name: "aws_iam_list_roles",
+          tool_output: { command: cmd, result: summarize(result) },
+        });
         return result;
       },
     }),
@@ -236,11 +289,19 @@ function makeIamTools(ctx: RunCtx) {
       inputSchema: z.object({ user_name: z.string() }),
       execute: async ({ user_name }) => {
         const cmd = `aws iam list-attached-user-policies --user-name ${user_name}`;
-        await logStep(ctx, { kind: "tool_call", tool_name: "aws_iam_list_attached_user_policies", tool_input: { command: cmd, user_name } });
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_iam_list_attached_user_policies",
+          tool_input: { command: cmd, user_name },
+        });
         const client = new IAMClient(awsConfig(ctx.creds));
         const out = await client.send(new ListAttachedUserPoliciesCommand({ UserName: user_name }));
         const result = { AttachedPolicies: out.AttachedPolicies ?? [] };
-        await logStep(ctx, { kind: "tool_result", tool_name: "aws_iam_list_attached_user_policies", tool_output: { command: cmd, result } });
+        await logStep(ctx, {
+          kind: "tool_result",
+          tool_name: "aws_iam_list_attached_user_policies",
+          tool_output: { command: cmd, result },
+        });
         return result;
       },
     }),
@@ -249,11 +310,19 @@ function makeIamTools(ctx: RunCtx) {
       inputSchema: z.object({ role_name: z.string() }),
       execute: async ({ role_name }) => {
         const cmd = `aws iam list-attached-role-policies --role-name ${role_name}`;
-        await logStep(ctx, { kind: "tool_call", tool_name: "aws_iam_list_attached_role_policies", tool_input: { command: cmd, role_name } });
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_iam_list_attached_role_policies",
+          tool_input: { command: cmd, role_name },
+        });
         const client = new IAMClient(awsConfig(ctx.creds));
         const out = await client.send(new ListAttachedRolePoliciesCommand({ RoleName: role_name }));
         const result = { AttachedPolicies: out.AttachedPolicies ?? [] };
-        await logStep(ctx, { kind: "tool_result", tool_name: "aws_iam_list_attached_role_policies", tool_output: { command: cmd, result } });
+        await logStep(ctx, {
+          kind: "tool_result",
+          tool_name: "aws_iam_list_attached_role_policies",
+          tool_output: { command: cmd, result },
+        });
         return result;
       },
     }),
@@ -262,11 +331,19 @@ function makeIamTools(ctx: RunCtx) {
       inputSchema: z.object({ user_name: z.string() }),
       execute: async ({ user_name }) => {
         const cmd = `aws iam list-access-keys --user-name ${user_name}`;
-        await logStep(ctx, { kind: "tool_call", tool_name: "aws_iam_list_access_keys", tool_input: { command: cmd, user_name } });
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_iam_list_access_keys",
+          tool_input: { command: cmd, user_name },
+        });
         const client = new IAMClient(awsConfig(ctx.creds));
         const out = await client.send(new ListAccessKeysCommand({ UserName: user_name }));
         const result = { AccessKeyMetadata: out.AccessKeyMetadata ?? [] };
-        await logStep(ctx, { kind: "tool_result", tool_name: "aws_iam_list_access_keys", tool_output: { command: cmd, result } });
+        await logStep(ctx, {
+          kind: "tool_result",
+          tool_name: "aws_iam_list_access_keys",
+          tool_output: { command: cmd, result },
+        });
         return result;
       },
     }),
@@ -293,30 +370,53 @@ function makeS3Tools(ctx: RunCtx) {
       inputSchema: z.object({}),
       execute: async () => {
         const cmd = "aws s3api list-buckets";
-        await logStep(ctx, { kind: "tool_call", tool_name: "aws_s3_list_buckets", tool_input: { command: cmd } });
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_s3_list_buckets",
+          tool_input: { command: cmd },
+        });
         const client = new S3Client(awsConfig(ctx.creds));
         const out = await client.send(new ListBucketsCommand({}));
-        const result = { Buckets: (out.Buckets ?? []).map((b) => ({ Name: b.Name, CreationDate: b.CreationDate })) };
-        await logStep(ctx, { kind: "tool_result", tool_name: "aws_s3_list_buckets", tool_output: { command: cmd, result: summarize(result) } });
+        const result = {
+          Buckets: (out.Buckets ?? []).map((b) => ({ Name: b.Name, CreationDate: b.CreationDate })),
+        };
+        await logStep(ctx, {
+          kind: "tool_result",
+          tool_name: "aws_s3_list_buckets",
+          tool_output: { command: cmd, result: summarize(result) },
+        });
         return result;
       },
     }),
     aws_s3_get_public_access_block: tool({
-      description: "S3 GetPublicAccessBlock — account-level public access block configuration for a bucket. Missing config means public access IS NOT blocked.",
+      description:
+        "S3 GetPublicAccessBlock — account-level public access block configuration for a bucket. Missing config means public access IS NOT blocked.",
       inputSchema: z.object({ bucket: z.string() }),
       execute: async ({ bucket }) => {
         const cmd = `aws s3api get-public-access-block --bucket ${bucket}`;
-        await logStep(ctx, { kind: "tool_call", tool_name: "aws_s3_get_public_access_block", tool_input: { command: cmd, bucket } });
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_s3_get_public_access_block",
+          tool_input: { command: cmd, bucket },
+        });
         const client = new S3Client(awsConfig(ctx.creds));
         try {
           const out = await client.send(new GetPublicAccessBlockCommand({ Bucket: bucket }));
           const result = { PublicAccessBlockConfiguration: out.PublicAccessBlockConfiguration };
-          await logStep(ctx, { kind: "tool_result", tool_name: "aws_s3_get_public_access_block", tool_output: { command: cmd, result } });
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_s3_get_public_access_block",
+            tool_output: { command: cmd, result },
+          });
           return result;
         } catch (e: unknown) {
           const err = e as { name?: string; message?: string };
           const result = { error: err.name ?? "Error", message: err.message };
-          await logStep(ctx, { kind: "tool_result", tool_name: "aws_s3_get_public_access_block", tool_output: { command: cmd, result } });
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_s3_get_public_access_block",
+            tool_output: { command: cmd, result },
+          });
           return result;
         }
       },
@@ -326,37 +426,64 @@ function makeS3Tools(ctx: RunCtx) {
       inputSchema: z.object({ bucket: z.string() }),
       execute: async ({ bucket }) => {
         const cmd = `aws s3api get-bucket-encryption --bucket ${bucket}`;
-        await logStep(ctx, { kind: "tool_call", tool_name: "aws_s3_get_bucket_encryption", tool_input: { command: cmd, bucket } });
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_s3_get_bucket_encryption",
+          tool_input: { command: cmd, bucket },
+        });
         const client = new S3Client(awsConfig(ctx.creds));
         try {
           const out = await client.send(new GetBucketEncryptionCommand({ Bucket: bucket }));
-          const result = { ServerSideEncryptionConfiguration: out.ServerSideEncryptionConfiguration };
-          await logStep(ctx, { kind: "tool_result", tool_name: "aws_s3_get_bucket_encryption", tool_output: { command: cmd, result } });
+          const result = {
+            ServerSideEncryptionConfiguration: out.ServerSideEncryptionConfiguration,
+          };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_s3_get_bucket_encryption",
+            tool_output: { command: cmd, result },
+          });
           return result;
         } catch (e: unknown) {
           const err = e as { name?: string; message?: string };
           const result = { error: err.name ?? "Error", message: err.message };
-          await logStep(ctx, { kind: "tool_result", tool_name: "aws_s3_get_bucket_encryption", tool_output: { command: cmd, result } });
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_s3_get_bucket_encryption",
+            tool_output: { command: cmd, result },
+          });
           return result;
         }
       },
     }),
     aws_s3_get_bucket_policy_status: tool({
-      description: "S3 GetBucketPolicyStatus — IsPublic flag indicating the bucket policy makes it public.",
+      description:
+        "S3 GetBucketPolicyStatus — IsPublic flag indicating the bucket policy makes it public.",
       inputSchema: z.object({ bucket: z.string() }),
       execute: async ({ bucket }) => {
         const cmd = `aws s3api get-bucket-policy-status --bucket ${bucket}`;
-        await logStep(ctx, { kind: "tool_call", tool_name: "aws_s3_get_bucket_policy_status", tool_input: { command: cmd, bucket } });
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_s3_get_bucket_policy_status",
+          tool_input: { command: cmd, bucket },
+        });
         const client = new S3Client(awsConfig(ctx.creds));
         try {
           const out = await client.send(new GetBucketPolicyStatusCommand({ Bucket: bucket }));
           const result = { PolicyStatus: out.PolicyStatus };
-          await logStep(ctx, { kind: "tool_result", tool_name: "aws_s3_get_bucket_policy_status", tool_output: { command: cmd, result } });
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_s3_get_bucket_policy_status",
+            tool_output: { command: cmd, result },
+          });
           return result;
         } catch (e: unknown) {
           const err = e as { name?: string; message?: string };
           const result = { error: err.name ?? "Error", message: err.message };
-          await logStep(ctx, { kind: "tool_result", tool_name: "aws_s3_get_bucket_policy_status", tool_output: { command: cmd, result } });
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_s3_get_bucket_policy_status",
+            tool_output: { command: cmd, result },
+          });
           return result;
         }
       },
@@ -366,11 +493,19 @@ function makeS3Tools(ctx: RunCtx) {
       inputSchema: z.object({ bucket: z.string() }),
       execute: async ({ bucket }) => {
         const cmd = `aws s3api get-bucket-location --bucket ${bucket}`;
-        await logStep(ctx, { kind: "tool_call", tool_name: "aws_s3_get_bucket_location", tool_input: { command: cmd, bucket } });
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_s3_get_bucket_location",
+          tool_input: { command: cmd, bucket },
+        });
         const client = new S3Client(awsConfig(ctx.creds));
         const out = await client.send(new GetBucketLocationCommand({ Bucket: bucket }));
         const result = { LocationConstraint: out.LocationConstraint ?? "us-east-1" };
-        await logStep(ctx, { kind: "tool_result", tool_name: "aws_s3_get_bucket_location", tool_output: { command: cmd, result } });
+        await logStep(ctx, {
+          kind: "tool_result",
+          tool_name: "aws_s3_get_bucket_location",
+          tool_output: { command: cmd, result },
+        });
         return result;
       },
     }),
@@ -393,11 +528,16 @@ function makeS3Tools(ctx: RunCtx) {
 function makeEc2Tools(ctx: RunCtx) {
   return {
     aws_ec2_describe_security_groups: tool({
-      description: "EC2 DescribeSecurityGroups — security groups in the configured region. Look for 0.0.0.0/0 ingress.",
+      description:
+        "EC2 DescribeSecurityGroups — security groups in the configured region. Look for 0.0.0.0/0 ingress.",
       inputSchema: z.object({}),
       execute: async () => {
         const cmd = `aws ec2 describe-security-groups --region ${ctx.creds.region}`;
-        await logStep(ctx, { kind: "tool_call", tool_name: "aws_ec2_describe_security_groups", tool_input: { command: cmd } });
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_ec2_describe_security_groups",
+          tool_input: { command: cmd },
+        });
         const client = new EC2Client(awsConfig(ctx.creds));
         const out = await client.send(new DescribeSecurityGroupsCommand({}));
         const result = {
@@ -409,16 +549,25 @@ function makeEc2Tools(ctx: RunCtx) {
             IpPermissions: g.IpPermissions,
           })),
         };
-        await logStep(ctx, { kind: "tool_result", tool_name: "aws_ec2_describe_security_groups", tool_output: { command: cmd, result: summarize(result, 4000) } });
+        await logStep(ctx, {
+          kind: "tool_result",
+          tool_name: "aws_ec2_describe_security_groups",
+          tool_output: { command: cmd, result: summarize(result, 4000) },
+        });
         return result;
       },
     }),
     aws_ec2_describe_instances: tool({
-      description: "EC2 DescribeInstances — running compute in the configured region, including public IPs.",
+      description:
+        "EC2 DescribeInstances — running compute in the configured region, including public IPs.",
       inputSchema: z.object({}),
       execute: async () => {
         const cmd = `aws ec2 describe-instances --region ${ctx.creds.region}`;
-        await logStep(ctx, { kind: "tool_call", tool_name: "aws_ec2_describe_instances", tool_input: { command: cmd } });
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_ec2_describe_instances",
+          tool_input: { command: cmd },
+        });
         const client = new EC2Client(awsConfig(ctx.creds));
         const out = await client.send(new DescribeInstancesCommand({}));
         const instances = (out.Reservations ?? []).flatMap((r) =>
@@ -432,7 +581,11 @@ function makeEc2Tools(ctx: RunCtx) {
           })),
         );
         const result = { Instances: instances };
-        await logStep(ctx, { kind: "tool_result", tool_name: "aws_ec2_describe_instances", tool_output: { command: cmd, result: summarize(result, 4000) } });
+        await logStep(ctx, {
+          kind: "tool_result",
+          tool_name: "aws_ec2_describe_instances",
+          tool_output: { command: cmd, result: summarize(result, 4000) },
+        });
         return result;
       },
     }),
@@ -530,10 +683,13 @@ export async function runAgent(params: {
     .eq("id", agentRunId);
 
   const tools =
-    agentType === "recon" ? makeReconTools(ctx) :
-    agentType === "iam" ? makeIamTools(ctx) :
-    agentType === "s3" ? makeS3Tools(ctx) :
-    makeEc2Tools(ctx);
+    agentType === "recon"
+      ? makeReconTools(ctx)
+      : agentType === "iam"
+        ? makeIamTools(ctx)
+        : agentType === "s3"
+          ? makeS3Tools(ctx)
+          : makeEc2Tools(ctx);
 
   const gateway = createLovableAiGatewayProvider(apiKey);
   const model = gateway("google/gemini-3-flash-preview");
@@ -563,7 +719,11 @@ export async function runAgent(params: {
     await logStep(ctx, { kind: "final", error: message });
     await supabase
       .from("agent_runs")
-      .update({ status: "error", summary: `Error: ${message}`, completed_at: new Date().toISOString() })
+      .update({
+        status: "error",
+        summary: `Error: ${message}`,
+        completed_at: new Date().toISOString(),
+      })
       .eq("id", agentRunId);
     return { summary: `Error: ${message}` };
   }

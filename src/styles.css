@@ -96,15 +96,16 @@
   --agent-ec2: oklch(0.78 0.17 55);
 }
 
-.dark, html {
+.dark,
+html {
   /* Default to dark. */
   --background: oklch(0.16 0.012 260);
   --foreground: oklch(0.95 0.005 250);
-  --card: oklch(0.20 0.012 260);
+  --card: oklch(0.2 0.012 260);
   --card-foreground: oklch(0.95 0.005 250);
   --popover: oklch(0.22 0.012 260);
   --popover-foreground: oklch(0.95 0.005 250);
-  --primary: oklch(0.78 0.17 55);            /* amber */
+  --primary: oklch(0.78 0.17 55); /* amber */
   --primary-foreground: oklch(0.18 0.012 260);
   --secondary: oklch(0.26 0.012 260);
   --secondary-foreground: oklch(0.95 0.005 250);
@@ -114,7 +115,7 @@
   --accent-foreground: oklch(0.95 0.005 250);
   --destructive: oklch(0.62 0.23 25);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.30 0.012 260);
+  --border: oklch(0.3 0.012 260);
   --input: oklch(0.28 0.012 260);
   --ring: oklch(0.78 0.17 55);
 
@@ -124,7 +125,7 @@
 
   --severity-info: oklch(0.72 0.05 240);
   --severity-low: oklch(0.75 0.13 200);
-  --severity-medium: oklch(0.80 0.17 85);
+  --severity-medium: oklch(0.8 0.17 85);
   --severity-high: oklch(0.72 0.2 40);
   --severity-critical: oklch(0.65 0.25 25);
 
@@ -153,7 +154,9 @@
       radial-gradient(circle at 80% 100%, oklch(0.75 0.15 290 / 0.04), transparent 50%);
   }
 
-  code, pre, .font-mono {
+  code,
+  pre,
+  .font-mono {
     font-family: var(--font-mono);
   }
 }
@@ -172,28 +175,53 @@
   word-break: break-word;
   overflow-x: auto;
 }
-.terminal .prompt { color: var(--color-primary); }
-.terminal .muted { color: var(--color-muted-foreground); }
-.terminal .ok { color: oklch(0.78 0.16 145); }
-.terminal .err { color: oklch(0.72 0.2 25); }
+.terminal .prompt {
+  color: var(--color-primary);
+}
+.terminal .muted {
+  color: var(--color-muted-foreground);
+}
+.terminal .ok {
+  color: oklch(0.78 0.16 145);
+}
+.terminal .err {
+  color: oklch(0.72 0.2 25);
+}
 
 /* status pulse */
 @keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 oklch(0.78 0.17 55 / 0.5); }
-  70% { box-shadow: 0 0 0 8px oklch(0.78 0.17 55 / 0); }
-  100% { box-shadow: 0 0 0 0 oklch(0.78 0.17 55 / 0); }
+  0% {
+    box-shadow: 0 0 0 0 oklch(0.78 0.17 55 / 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 8px oklch(0.78 0.17 55 / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 oklch(0.78 0.17 55 / 0);
+  }
 }
-.pulse-running { animation: pulse-ring 1.8s ease-out infinite; }
+.pulse-running {
+  animation: pulse-ring 1.8s ease-out infinite;
+}
 
 /* react-flow surface tweaks */
-.react-flow__background { background-color: var(--color-background); }
-.react-flow__edge-path { stroke: var(--color-border); stroke-width: 1.5; }
+.react-flow__background {
+  background-color: var(--color-background);
+}
+.react-flow__edge-path {
+  stroke: var(--color-border);
+  stroke-width: 1.5;
+}
 .react-flow__edge.animated .react-flow__edge-path {
   stroke: var(--color-primary);
   stroke-dasharray: 6;
   animation: dashflow 1.2s linear infinite;
 }
-@keyframes dashflow { to { stroke-dashoffset: -12; } }
+@keyframes dashflow {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
 
 .react-flow__handle {
   background: var(--color-primary);
@@ -201,4 +229,6 @@
   width: 10px;
   height: 10px;
 }
-.react-flow__attribution { display: none; }
+.react-flow__attribution {
+  display: none;
+}

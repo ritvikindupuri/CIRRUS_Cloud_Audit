@@ -15,7 +15,7 @@ export function CirrusLogo({ size = 28, withWordmark = true, className = "" }: P
         width={size}
         height={size}
         style={{ width: size, height: size }}
-        className="object-contain invert dark:invert-0"
+        className="object-contain dark:invert"
         loading="lazy"
       />
       {withWordmark && (

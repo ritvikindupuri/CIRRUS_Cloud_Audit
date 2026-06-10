@@ -28,16 +28,21 @@ export function AgentNode({ data }: NodeProps) {
   const d = data as AgentNodeData;
   const Icon = ICONS[d.agent.icon];
   const StatusIcon =
-    d.status === "complete" ? Check :
-    d.status === "running" ? Loader2 :
-    d.status === "error" ? AlertCircle :
-    Clock;
+    d.status === "complete"
+      ? Check
+      : d.status === "running"
+        ? Loader2
+        : d.status === "error"
+          ? AlertCircle
+          : Clock;
 
   return (
     <div
       onClick={d.onSelect}
       className={`group cursor-pointer rounded-lg border bg-card transition-all ${
-        d.selected ? "border-primary shadow-[0_0_0_3px_oklch(0.78_0.17_55/0.2)]" : "border-border hover:border-primary/40"
+        d.selected
+          ? "border-primary shadow-[0_0_0_3px_oklch(0.78_0.17_55/0.2)]"
+          : "border-border hover:border-primary/40"
       } ${d.status === "running" ? "pulse-running" : ""}`}
       style={{ width: 240 }}
     >
@@ -62,10 +67,13 @@ export function AgentNode({ data }: NodeProps) {
       <div className="flex items-center justify-between border-t border-border px-3 py-2 text-[11px]">
         <span
           className={`inline-flex items-center gap-1.5 font-mono uppercase tracking-wider ${
-            d.status === "complete" ? "text-emerald-400" :
-            d.status === "running" ? "text-primary" :
-            d.status === "error" ? "text-destructive" :
-            "text-muted-foreground"
+            d.status === "complete"
+              ? "text-emerald-400"
+              : d.status === "running"
+                ? "text-primary"
+                : d.status === "error"
+                  ? "text-destructive"
+                  : "text-muted-foreground"
           }`}
         >
           <StatusIcon className={`h-3 w-3 ${d.status === "running" ? "animate-spin" : ""}`} />
