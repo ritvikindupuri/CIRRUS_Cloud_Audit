@@ -105,7 +105,7 @@ export function AgentDetailPanel({ run }: { run: Run | null }) {
     );
   }
 
-  const def = AGENT_DEFINITIONS[run.agent_type];
+  const def = getAgentDefinition(run.agent_type, run.custom_agent ?? undefined);
 
   return (
     <div className="flex h-full flex-col">
