@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedSchedulesRouteImport } from './routes/_authenticated/schedules'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAgentsRouteImport } from './routes/_authenticated/agents'
 import { Route as AuthenticatedScansNewRouteImport } from './routes/_authenticated/scans/new'
@@ -30,6 +31,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedSchedulesRoute = AuthenticatedSchedulesRouteImport.update({
+  id: '/schedules',
+  path: '/schedules',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/agents': typeof AuthenticatedAgentsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/schedules': typeof AuthenticatedSchedulesRoute
   '/scans/$scanId': typeof AuthenticatedScansScanIdRoute
   '/scans/new': typeof AuthenticatedScansNewRoute
 }
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/agents': typeof AuthenticatedAgentsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/schedules': typeof AuthenticatedSchedulesRoute
   '/scans/$scanId': typeof AuthenticatedScansScanIdRoute
   '/scans/new': typeof AuthenticatedScansNewRoute
 }
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/agents': typeof AuthenticatedAgentsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/schedules': typeof AuthenticatedSchedulesRoute
   '/_authenticated/scans/$scanId': typeof AuthenticatedScansScanIdRoute
   '/_authenticated/scans/new': typeof AuthenticatedScansNewRoute
 }
@@ -86,10 +95,18 @@ export interface FileRouteTypes {
     | '/auth'
     | '/agents'
     | '/dashboard'
+    | '/schedules'
     | '/scans/$scanId'
     | '/scans/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/agents' | '/dashboard' | '/scans/$scanId' | '/scans/new'
+  to:
+    | '/'
+    | '/auth'
+    | '/agents'
+    | '/dashboard'
+    | '/schedules'
+    | '/scans/$scanId'
+    | '/scans/new'
   id:
     | '__root__'
     | '/'
@@ -97,6 +114,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/agents'
     | '/_authenticated/dashboard'
+    | '/_authenticated/schedules'
     | '/_authenticated/scans/$scanId'
     | '/_authenticated/scans/new'
   fileRoutesById: FileRoutesById
@@ -129,6 +147,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/schedules': {
+      id: '/_authenticated/schedules'
+      path: '/schedules'
+      fullPath: '/schedules'
+      preLoaderRoute: typeof AuthenticatedSchedulesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
@@ -164,6 +189,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAgentsRoute: typeof AuthenticatedAgentsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedSchedulesRoute: typeof AuthenticatedSchedulesRoute
   AuthenticatedScansScanIdRoute: typeof AuthenticatedScansScanIdRoute
   AuthenticatedScansNewRoute: typeof AuthenticatedScansNewRoute
 }
@@ -171,6 +197,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAgentsRoute: AuthenticatedAgentsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedSchedulesRoute: AuthenticatedSchedulesRoute,
   AuthenticatedScansScanIdRoute: AuthenticatedScansScanIdRoute,
   AuthenticatedScansNewRoute: AuthenticatedScansNewRoute,
 }
