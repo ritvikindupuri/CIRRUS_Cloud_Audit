@@ -2,7 +2,7 @@
 // a small set of read-only AWS tools, and persists every thought / tool
 // call / tool result to agent_steps as it happens. Findings get inserted
 // into the findings table.
-import { generateText, stepCountIs, tool } from "ai";
+import { generateText, stepCountIs, tool, type ToolSet } from "ai";
 import { z } from "zod";
 import { STSClient, GetCallerIdentityCommand } from "@aws-sdk/client-sts";
 import {
