@@ -682,7 +682,7 @@ function makeCustomTools(ctx: RunCtx, services: AwsService[]) {
     const m = /^aws_([^_]+)_/.exec(name);
     if (m && allowed.has(m[1] as AwsService)) filtered[name] = t;
   }
-  return filtered as ReturnType<typeof makeReconTools>;
+  return filtered as ToolSet;
 }
 
 export interface CustomAgentConfig {
