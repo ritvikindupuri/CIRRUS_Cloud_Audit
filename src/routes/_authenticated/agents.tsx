@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CirrusLogo } from "@/components/cirrus-logo";
 import { AWS_SERVICE_OPTIONS, type AwsService } from "@/lib/agents/definitions";
-import { ArrowLeft, Plus, Trash2, Beaker } from "lucide-react";
+import { validateCustomAgentDsl } from "@/lib/agents/dsl-validator";
+import { ArrowLeft, Plus, Trash2, Beaker, AlertTriangle, ShieldAlert, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 interface CustomAgent {
@@ -53,16 +54,30 @@ function AgentsPage() {
     void load();
   }, []);
 
+  const validation = useMemo(() => {
+    if (!editing) return null;
+    return validateCustomAgentDsl({
+      name: editing.name ?? "",
+      description: editing.description ?? null,
+      system_prompt: editing.system_prompt ?? "",
+      services: editing.services ?? [],
+      color: editing.color ?? COLORS[0],
+    });
+  }, [editing]);
+
   async function save() {
-    if (!editing?.name?.trim()) return toast.error("Name is required");
-    if (!editing.system_prompt?.trim()) return toast.error("System prompt is required");
+    if (!editing) return;
+    if (!validation?.ok) {
+      toast.error(validation?.errors[0] ?? "Validation failed");
+      return;
+    }
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return;
 
     const payload = {
-      name: editing.name.trim(),
+      name: editing.name!.trim(),
       description: editing.description?.trim() ?? null,
-      system_prompt: editing.system_prompt,
+      system_prompt: editing.system_prompt!,
       services: editing.services ?? [],
       color: editing.color ?? COLORS[0],
     };
@@ -209,8 +224,43 @@ function AgentsPage() {
                   className="mt-1 font-mono text-xs"
                 />
               </div>
+              {validation && (
+                <div className="rounded-md border border-border bg-background p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                    {validation.ok ? (
+                      <ShieldCheck className="h-3.5 w-3.5 text-severity-info" />
+                    ) : (
+                      <ShieldAlert className="h-3.5 w-3.5 text-destructive" />
+                    )}
+                    DSL safety check
+                  </div>
+                  {validation.errors.map((e, i) => (
+                    <p key={i} className="flex items-start gap-1 text-xs text-destructive">
+                      <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {e}
+                    </p>
+                  ))}
+                  {validation.warnings.map((w, i) => (
+                    <p key={i} className="flex items-start gap-1 text-xs text-severity-medium">
+                      <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {w}
+                    </p>
+                  ))}
+                  {validation.forbiddenCommands.length > 0 && (
+                    <div className="text-[11px] font-mono text-muted-foreground">
+                      Blocked phrases:{" "}
+                      {validation.forbiddenCommands.slice(0, 4).map((c, i) => (
+                        <span key={i} className="mr-2 rounded bg-destructive/10 px-1.5 py-0.5 text-destructive">
+                          {c.phrase}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {validation.ok && validation.warnings.length === 0 && (
+                    <p className="text-xs text-muted-foreground">All checks passed.</p>
+                  )}
+                </div>
+              )}
               <div className="flex gap-2">
-                <Button onClick={save}>Save agent</Button>
+                <Button onClick={save} disabled={!validation?.ok}>Save agent</Button>
                 <Button variant="ghost" onClick={() => setEditing(null)}>
                   Cancel
                 </Button>

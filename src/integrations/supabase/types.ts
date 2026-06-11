@@ -17,6 +17,7 @@ export type Database = {
       agent_runs: {
         Row: {
           agent_type: string
+          blocked_calls: Json
           completed_at: string | null
           created_at: string
           custom_agent_id: string | null
@@ -30,6 +31,7 @@ export type Database = {
         }
         Insert: {
           agent_type: string
+          blocked_calls?: Json
           completed_at?: string | null
           created_at?: string
           custom_agent_id?: string | null
@@ -43,6 +45,7 @@ export type Database = {
         }
         Update: {
           agent_type?: string
+          blocked_calls?: Json
           completed_at?: string | null
           created_at?: string
           custom_agent_id?: string | null
@@ -218,6 +221,90 @@ export type Database = {
           id?: string
         }
         Relationships: []
+      }
+      remediation_deployments: {
+        Row: {
+          change_set_changes: Json | null
+          change_set_id: string | null
+          change_set_name: string | null
+          change_set_status: string | null
+          created_at: string
+          error_message: string | null
+          executed: boolean
+          executed_at: string | null
+          finding_id: string
+          id: string
+          region: string
+          rolled_back: boolean
+          rolled_back_at: string | null
+          scan_id: string
+          stack_id: string | null
+          stack_name: string
+          status: string
+          template_yaml: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          change_set_changes?: Json | null
+          change_set_id?: string | null
+          change_set_name?: string | null
+          change_set_status?: string | null
+          created_at?: string
+          error_message?: string | null
+          executed?: boolean
+          executed_at?: string | null
+          finding_id: string
+          id?: string
+          region: string
+          rolled_back?: boolean
+          rolled_back_at?: string | null
+          scan_id: string
+          stack_id?: string | null
+          stack_name: string
+          status?: string
+          template_yaml: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          change_set_changes?: Json | null
+          change_set_id?: string | null
+          change_set_name?: string | null
+          change_set_status?: string | null
+          created_at?: string
+          error_message?: string | null
+          executed?: boolean
+          executed_at?: string | null
+          finding_id?: string
+          id?: string
+          region?: string
+          rolled_back?: boolean
+          rolled_back_at?: string | null
+          scan_id?: string
+          stack_id?: string | null
+          stack_name?: string
+          status?: string
+          template_yaml?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remediation_deployments_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "findings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remediation_deployments_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "scans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scans: {
         Row: {
