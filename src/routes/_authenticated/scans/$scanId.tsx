@@ -15,10 +15,11 @@ import { AgentNode, type AgentNodeData } from "@/components/agent-node";
 import { AgentDetailPanel } from "@/components/agent-detail-panel";
 import { FindingsList } from "@/components/findings-list";
 import { DriftDiff } from "@/components/drift-diff";
+import { ExecutionTimeline } from "@/components/execution-timeline";
 import { CirrusLogo } from "@/components/cirrus-logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, RotateCw, Download, GitCompare } from "lucide-react";
+import { ArrowLeft, RotateCw, Download, GitCompare, Clock } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { runScan } from "@/lib/scans.functions";
 import { loadCreds } from "@/lib/aws-creds";
@@ -80,7 +81,7 @@ function ScanDetail() {
   const [parentFindings, setParentFindings] = useState<FindingRow[] | null>(null);
   const [customAgents, setCustomAgents] = useState<Record<string, CustomAgentRow>>({});
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
-  const [tab, setTab] = useState<"trace" | "findings" | "drift">("trace");
+  const [tab, setTab] = useState<"trace" | "timeline" | "findings" | "drift">("trace");
 
   useEffect(() => {
     let active = true;
@@ -278,6 +279,10 @@ function ScanDetail() {
                 <TabsTrigger value="trace" className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border">
                   Agent trace
                 </TabsTrigger>
+                <TabsTrigger value="timeline" className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border">
+                  <Clock className="mr-1 h-3 w-3" />
+                  Timeline
+                </TabsTrigger>
                 <TabsTrigger value="findings" className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border">
                   Findings · {findings.length}
                 </TabsTrigger>
@@ -291,6 +296,17 @@ function ScanDetail() {
             </div>
             <TabsContent value="trace" className="flex-1 overflow-hidden m-0">
               <AgentDetailPanel run={selectedRunWithCustom} />
+            </TabsContent>
+            <TabsContent value="timeline" className="flex-1 overflow-hidden m-0">
+              <ExecutionTimeline
+                scanId={scanId}
+                runs={runs.map((r) => ({
+                  id: r.id,
+                  agent_type: r.agent_type,
+                  custom_agent_id: r.custom_agent_id,
+                  custom_agent: r.custom_agent_id ? customAgents[r.custom_agent_id] ?? null : null,
+                }))}
+              />
             </TabsContent>
             <TabsContent value="findings" className="flex-1 overflow-auto m-0 p-3">
               <FindingsList findings={findings} />
