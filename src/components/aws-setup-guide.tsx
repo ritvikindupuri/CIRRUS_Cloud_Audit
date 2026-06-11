@@ -30,6 +30,29 @@ const POLICY_JSON = `{
   ]
 }`;
 
+const REMEDIATION_POLICY = `{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CirrusRemediation",
+      "Effect": "Allow",
+      "Action": [
+        "iam:PutUserPolicy",
+        "iam:DeleteUserPolicy",
+        "cloudformation:CreateChangeSet",
+        "cloudformation:DescribeChangeSet",
+        "cloudformation:ExecuteChangeSet",
+        "cloudformation:DeleteChangeSet",
+        "cloudformation:DeleteStack",
+        "cloudformation:DescribeStacks",
+        "cloudformation:CreateStack",
+        "cloudformation:UpdateStack"
+      ],
+      "Resource": "*"
+    }
+  ]
+}`;
+
 function copy(text: string, label: string) {
   navigator.clipboard.writeText(text);
   toast.success(`${label} copied`);
