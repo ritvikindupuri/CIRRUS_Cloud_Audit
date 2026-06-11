@@ -92,30 +92,17 @@ export const createDryRunChangeSet = createServerFn({ method: "POST" })
     );
 
     // Poll until change set leaves CREATE_PENDING / CREATE_IN_PROGRESS.
-    type DescribeChangeSetOutput = Awaited<
-      ReturnType<InstanceType<typeof CloudFormationClient>["send"]>
-    > & {
-      Status?: string;
-      StatusReason?: string;
-      StackId?: string;
-      Changes?: Array<{
-        Type?: string;
-        ResourceChange?: {
-          Action?: string;
-          LogicalResourceId?: string;
-          ResourceType?: string;
-          Replacement?: string;
-        };
-      }>;
-    };
-    const { CloudFormationClient } = await import("@aws-sdk/client-cloudformation");
-    let described: DescribeChangeSetOutput | null = null;
+    const { DescribeChangeSetCommand: DescribeChangeSetCmd } = await import(
+      "@aws-sdk/client-cloudformation"
+    );
+    type DescribeOut = import("@aws-sdk/client-cloudformation").DescribeChangeSetCommandOutput;
+    let described: DescribeOut | null = null;
     for (let i = 0; i < 30; i++) {
       await new Promise((r) => setTimeout(r, 1500));
       described = (await client.send(
-        new DescribeChangeSetCommand({ ChangeSetName: created.Id! }),
-      )) as DescribeChangeSetOutput;
-      const status = described?.Status;
+        new DescribeChangeSetCmd({ ChangeSetName: created.Id! }),
+      )) as DescribeOut;
+      const status = described.Status;
       if (
         status === "CREATE_COMPLETE" ||
         status === "FAILED" ||
