@@ -64,11 +64,9 @@ export const createDryRunChangeSet = createServerFn({ method: "POST" })
     const stackName = stackNameFor(findingId);
     const changeSetName = `cirrus-${Date.now()}`;
 
-    const {
-      CreateChangeSetCommand,
-      DescribeChangeSetCommand,
-      DescribeStacksCommand,
-    } = await import("@aws-sdk/client-cloudformation");
+    const { CreateChangeSetCommand, DescribeStacksCommand } = await import(
+      "@aws-sdk/client-cloudformation"
+    );
     const client = await cfnClient(creds);
 
     // Detect whether the stack already exists, decide CREATE vs UPDATE.
