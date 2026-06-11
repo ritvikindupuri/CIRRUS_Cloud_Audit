@@ -7,6 +7,7 @@ import {
   createDryRunChangeSet,
   executeRemediation,
   rollbackRemediation,
+  bootstrapRemediationPermissions,
 } from "@/lib/remediation.functions";
 import { loadCreds } from "@/lib/aws-creds";
 import { supabase } from "@/integrations/supabase/client";
@@ -103,21 +104,50 @@ function FindingCard({ finding: f }: { finding: Finding }) {
     toast.success("Copied");
   }
 
+  async function runDryRunOnce(creds: NonNullable<ReturnType<typeof loadCreds>>) {
+    const r = await createDryRunChangeSet({ data: { findingId: f.id, creds } });
+    toast.success(`Change set ${r.status} · ${r.changes.length} change(s)`);
+    const { data } = await supabase
+      .from("remediation_deployments")
+      .select("*")
+      .eq("id", r.deploymentId)
+      .single();
+    setDeployment(data as Deployment);
+  }
+
   async function dryRun() {
     const creds = loadCreds();
     if (!creds) return toast.error("AWS credentials are no longer in this tab. Start a new scan to re-enter them.");
     setCfnBusy("dry");
     try {
-      const r = await createDryRunChangeSet({ data: { findingId: f.id, creds } });
-      toast.success(`Change set ${r.status} · ${r.changes.length} change(s)`);
-      const { data } = await supabase
-        .from("remediation_deployments")
-        .select("*")
-        .eq("id", r.deploymentId)
-        .single();
-      setDeployment(data as Deployment);
+      await runDryRunOnce(creds);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Dry run failed");
+      const msg = e instanceof Error ? e.message : String(e);
+      const isPermsIssue =
+        /AccessDenied|not authorized to perform|cloudformation:/i.test(msg);
+      if (isPermsIssue) {
+        toast.message("Trying to self-grant CloudFormation permissions…");
+        try {
+          const b = await bootstrapRemediationPermissions({ data: { creds } });
+          if (b.ok) {
+            toast.success(b.reason);
+            // IAM eventual consistency — wait a moment, then retry once.
+            await new Promise((r) => setTimeout(r, 4000));
+            try {
+              await runDryRunOnce(creds);
+              return;
+            } catch (e2) {
+              toast.error(e2 instanceof Error ? e2.message : "Retry failed");
+              return;
+            }
+          }
+          toast.error(b.reason);
+        } catch (be) {
+          toast.error(be instanceof Error ? be.message : "Bootstrap failed");
+        }
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setCfnBusy(null);
     }
