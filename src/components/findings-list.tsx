@@ -7,6 +7,7 @@ import {
   createDryRunChangeSet,
   executeRemediation,
   rollbackRemediation,
+  bootstrapRemediationPermissions,
 } from "@/lib/remediation.functions";
 import { loadCreds } from "@/lib/aws-creds";
 import { supabase } from "@/integrations/supabase/client";
