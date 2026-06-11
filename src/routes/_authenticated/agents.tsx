@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CirrusLogo } from "@/components/cirrus-logo";
 import { AWS_SERVICE_OPTIONS, type AwsService } from "@/lib/agents/definitions";
-import { ArrowLeft, Plus, Trash2, Beaker } from "lucide-react";
+import { validateCustomAgentDsl } from "@/lib/agents/dsl-validator";
+import { ArrowLeft, Plus, Trash2, Beaker, AlertTriangle, ShieldAlert, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 interface CustomAgent {
