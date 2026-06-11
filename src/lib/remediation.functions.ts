@@ -281,3 +281,93 @@ export const rollbackRemediation = createServerFn({ method: "POST" })
 
     return { ok, status: stackStatus, reason };
   });
+
+// Attempts to self-grant the CloudFormation permissions Cirrus needs on the
+// caller's IAM principal so the user doesn't have to paste a JSON policy into
+// the AWS Console. Works only when the credentials belong to an IAM user AND
+// already have iam:PutUserPolicy (e.g. a power-user / admin key). For an
+// assumed-role / SSO / federated principal it cannot self-grant and surfaces
+// a clear message instead.
+const BootstrapInput = z.object({ creds: AwsCredsSchema });
+
+const CIRRUS_POLICY_NAME = "CirrusRemediationAccess";
+const CIRRUS_POLICY_DOC = JSON.stringify({
+  Version: "2012-10-17",
+  Statement: [
+    {
+      Effect: "Allow",
+      Action: [
+        "cloudformation:CreateChangeSet",
+        "cloudformation:DescribeChangeSet",
+        "cloudformation:ExecuteChangeSet",
+        "cloudformation:DeleteChangeSet",
+        "cloudformation:DeleteStack",
+        "cloudformation:DescribeStacks",
+        "cloudformation:CreateStack",
+        "cloudformation:UpdateStack",
+      ],
+      Resource: "*",
+    },
+  ],
+});
+
+export const bootstrapRemediationPermissions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => BootstrapInput.parse(input))
+  .handler(async ({ data }) => {
+    const { creds } = data;
+    const { STSClient, GetCallerIdentityCommand } = await import("@aws-sdk/client-sts");
+    const sts = new STSClient({
+      region: creds.region,
+      credentials: {
+        accessKeyId: creds.accessKeyId,
+        secretAccessKey: creds.secretAccessKey,
+        sessionToken: creds.sessionToken,
+      },
+    });
+    const id = await sts.send(new GetCallerIdentityCommand({}));
+    const arn = id.Arn ?? "";
+    // arn:aws:iam::123:user/Name  vs  arn:aws:sts::123:assumed-role/...
+    const userMatch = arn.match(/:user\/(.+)$/);
+    if (!userMatch) {
+      return {
+        ok: false,
+        principal: arn,
+        reason:
+          "Your credentials are an assumed role or federated identity. Cirrus can only self-grant on a long-lived IAM user. Ask your admin to attach the CloudFormation policy shown in the docs, or rescan with an IAM user key.",
+      };
+    }
+    const userName = decodeURIComponent(userMatch[1]);
+    const { IAMClient, PutUserPolicyCommand } = await import("@aws-sdk/client-iam");
+    const iam = new IAMClient({
+      region: creds.region,
+      credentials: {
+        accessKeyId: creds.accessKeyId,
+        secretAccessKey: creds.secretAccessKey,
+        sessionToken: creds.sessionToken,
+      },
+    });
+    try {
+      await iam.send(
+        new PutUserPolicyCommand({
+          UserName: userName,
+          PolicyName: CIRRUS_POLICY_NAME,
+          PolicyDocument: CIRRUS_POLICY_DOC,
+        }),
+      );
+      return {
+        ok: true,
+        principal: arn,
+        userName,
+        reason: `Attached inline policy ${CIRRUS_POLICY_NAME} to IAM user ${userName}. Changes propagate in a few seconds.`,
+      };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return {
+        ok: false,
+        principal: arn,
+        userName,
+        reason: `Could not self-grant: ${msg}. Your scan credentials need iam:PutUserPolicy, or an admin must attach the policy manually.`,
+      };
+    }
+  });
