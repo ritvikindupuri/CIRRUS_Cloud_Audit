@@ -188,6 +188,31 @@ export function AwsSetupGuide() {
             </p>
           </AccordionContent>
         </AccordionItem>
+
+        <AccordionItem value="step-7">
+          <AccordionTrigger className="px-3 text-sm">
+            <span className="flex items-center gap-3">
+              <StepDot n={7} /> (Optional) Enable one-click remediation
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="px-3 pb-4 text-sm text-muted-foreground space-y-3">
+            <p>
+              The one-click CloudFormation fix feature needs permission to create and execute change sets. If you want this, attach an <strong className="text-foreground">additional</strong> inline policy to the same <code className="font-mono text-foreground">cirrus-audit</code> user:
+            </p>
+            <div className="relative">
+              <pre className="terminal max-h-72 overflow-auto pr-12 text-xs">{REMEDIATION_POLICY}</pre>
+              <button
+                onClick={() => copy(REMEDIATION_POLICY, "Remediation policy")}
+                className="absolute right-2 top-2 inline-flex items-center gap-1 rounded border border-border bg-surface px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <Copy className="h-3 w-3" /> Copy
+              </button>
+            </div>
+            <div className="rounded border border-amber-200/30 bg-amber-950/20 p-3 text-xs text-amber-100">
+              <strong className="text-amber-200">Important caveat:</strong> This only works if your scan credentials themselves have <code className="font-mono text-foreground">iam:PutUserPolicy</code> (e.g. a power-user key). A pure read-only audit user can&rsquo;t grant itself write access — AWS won&rsquo;t allow that. For assumed-role / SSO principals, the app will show a clear message instead and you&rsquo;ll need to attach the policy manually.
+            </div>
+          </AccordionContent>
+        </AccordionItem>
       </Accordion>
     </div>
   );
