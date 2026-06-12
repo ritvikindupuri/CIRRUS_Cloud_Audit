@@ -351,6 +351,82 @@ function makeIamTools(ctx: RunCtx) {
         return result;
       },
     }),
+    aws_iam_get_detailed_inventory: tool({
+      description: "IAM GetDetailedInventory — retrieves lists of users, user-attached policies, access keys, roles, and role-attached policies in parallel on the server. Ideal for a fast, comprehensive IAM scan.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        const cmd = "aws iam get-detailed-inventory (bulk retrieve)";
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_iam_get_detailed_inventory",
+          tool_input: { command: cmd },
+        });
+        const client = new IAMClient(awsConfig(ctx.creds));
+        try {
+          const [usersOut, rolesOut, summaryOut] = await Promise.all([
+            client.send(new ListUsersCommand({})),
+            client.send(new ListRolesCommand({})),
+            client.send(new GetAccountSummaryCommand({})).catch(() => ({ SummaryMap: {} })),
+          ]);
+
+          const users = (usersOut.Users ?? []).slice(0, 10);
+          const roles = (rolesOut.Roles ?? []).slice(0, 10);
+
+          const userDetails = await Promise.all(
+            users.map(async (u) => {
+              const userName = u.UserName!;
+              const [policies, keys] = await Promise.all([
+                client.send(new ListAttachedUserPoliciesCommand({ UserName: userName })).catch(() => ({ AttachedPolicies: [] })),
+                client.send(new ListAccessKeysCommand({ UserName: userName })).catch(() => ({ AccessKeyMetadata: [] })),
+              ]);
+              return {
+                UserName: userName,
+                Arn: u.Arn,
+                CreateDate: u.CreateDate,
+                PasswordLastUsed: u.PasswordLastUsed,
+                AttachedPolicies: policies.AttachedPolicies ?? [],
+                AccessKeys: keys.AccessKeyMetadata ?? [],
+              };
+            })
+          );
+
+          const roleDetails = await Promise.all(
+            roles.map(async (r) => {
+              const roleName = r.RoleName!;
+              const policies = await client.send(new ListAttachedRolePoliciesCommand({ RoleName: roleName })).catch(() => ({ AttachedPolicies: [] }));
+              return {
+                RoleName: roleName,
+                Arn: r.Arn,
+                CreateDate: r.CreateDate,
+                AttachedPolicies: policies.AttachedPolicies ?? [],
+              };
+            })
+          );
+
+          const result = {
+            SummaryMap: summaryOut.SummaryMap,
+            Users: userDetails,
+            Roles: roleDetails,
+          };
+
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_iam_get_detailed_inventory",
+            tool_output: { command: cmd, result: summarize(result, 6000) },
+          });
+          return result;
+        } catch (e: unknown) {
+          const err = e as { name?: string; message?: string };
+          const result = { error: err.name ?? "Error", message: err.message };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_iam_get_detailed_inventory",
+            tool_output: { command: cmd, result },
+          });
+          return result;
+        }
+      },
+    }),
     report_finding: tool({
       description: "Record a security finding for the scan report.",
       inputSchema: z.object({
@@ -1092,9 +1168,8 @@ Rules:
 Your job: enumerate IAM users and roles, inspect attached policies, and flag privilege issues.
 
 Rules:
-- Start by listing users and roles.
-- For up to 5 of the most interesting users, list their attached policies and their access keys.
-- For up to 5 of the most interesting roles, list their attached policies.
+- First, call aws_iam_get_detailed_inventory to fetch all users, roles, policies, and access keys in a single parallelized request.
+- Analyze the returned detailed inventory for security risks. Do not make multiple sequential calls to list policies or access keys unless the bulk retrieval fails.
 - Flag findings such as:
   * AdministratorAccess attached to a user (HIGH/CRITICAL)
   * Access keys older than 90 days or never-rotated (MEDIUM)
