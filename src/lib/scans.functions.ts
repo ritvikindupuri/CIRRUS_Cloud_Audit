@@ -164,7 +164,7 @@ Respond with ONLY valid JSON in this exact shape (no markdown, no backticks):
 {
   "explanation": "1-3 sentence plain-English explanation of risk and fix",
   "cli": "ready-to-run AWS CLI command(s), one per line",
-  "cloudformation": "minimal CloudFormation YAML snippet that applies the fix",
+  "cloudformation": "a complete, valid, deployable CloudFormation YAML template (must include a Resources: section with at least one resource member that applies the fix)",
   "rollback": "1-2 lines on how to undo if it breaks something"
 }`;
 
