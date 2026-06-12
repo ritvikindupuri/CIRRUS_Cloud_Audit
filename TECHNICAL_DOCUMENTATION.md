@@ -14,6 +14,7 @@
 3. [Agent Architecture](#agent-architecture)
    - [The ReAct Autonomous Loop](#the-react-autonomous-loop)
    - [Core Agent Profiles](#core-agent-profiles)
+   - [Hallucination Prevention and Grounding Controls](#hallucination-prevention-and-grounding-controls)
 4. [Core Feature Specifications](#core-feature-specifications)
    - [Zero-Trust AWS Credentials Lifecycle](#zero-trust-aws-credentials-lifecycle)
    - [Custom Agent DSL Safety Validation Engine](#custom-agent-dsl-safety-validation-engine)
@@ -157,6 +158,15 @@ Dynamic agent structures created using the Custom Agent Builder. These compile c
 * **DynamoDB**: `aws_dynamodb_list_tables` and `aws_dynamodb_describe_table` (checks KMS keys and table configurations).
 * **KMS**: `aws_kms_list_keys`, `aws_kms_describe_key` (checks key state and rotation), and `aws_kms_get_key_policy` (verifies key access rules).
 * **CloudTrail**: `aws_cloudtrail_describe_trails` and `aws_cloudtrail_get_trail_status` (verifies trail logging states).
+
+### Hallucination Prevention and Grounding Controls
+
+To ensure that agents make decisions based on real AWS data and do not invent or hallucinate configurations or vulnerabilities, Cirrus enforces four grounding controls at the systems architecture level:
+
+* **Tool-Grounded Observation Constraint**: The agent prompt engine strictly instructs the model that it is forbidden from referencing any AWS resource, user, policy, bucket, or instance unless that exact resource was returned in a previous `tool_result` step. The system prompt enforces: `"Use the available tools. Do not invent data."`
+* **Context Window Sandboxing**: Custom agents are only loaded with the tools matching their selected service configuration parameters. If an agent tries to invent or call non-existent tools, the Vercel AI SDK runtime throws an exception or the model context rejects the schema.
+* **Structured Schema Grounding**: The `report_finding` tool forces the model to structure output parameters explicitly through a Zod schema requiring `severity`, `title`, `description`, and `resource`. The model cannot report generalized findings without providing the exact ARN or resource identifier retrieved from an active `tool_result` observation block.
+* **Mandatory Step Reasoning**: Every step in the ReAct loop forces the model to log a `thought` describing its intent prior to executing the tool command. This step-by-step reasoning (Chain-of-Thought) forces the model to logically map its queries and prevents it from jumping to unsupported conclusions or inventing vulnerabilities.
 
 ---
 
