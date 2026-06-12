@@ -155,16 +155,16 @@ function Landing() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.4, duration: 0.8, type: "spring", stiffness: 50 }}
-            className="relative flex items-center justify-center lg:justify-end"
+            className="relative flex items-center justify-center"
           >
             {/* Warm radial background glow */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-orange-500/10 rounded-full blur-[100px] pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-orange-500/15 rounded-full blur-[120px] pointer-events-none" />
 
             <CirrusLogo
-              size={350}
+              size={260}
               withWordmark={false}
-              className="opacity-90 relative z-10"
-              isometric={true}
+              className="opacity-95 relative z-10"
+              isometric={false}
             />
           </motion.div>
         </div>
