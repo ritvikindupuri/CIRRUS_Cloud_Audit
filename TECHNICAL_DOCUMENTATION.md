@@ -20,6 +20,7 @@
    - [Remediation Playbook Compiler and CloudFormation Auditing](#remediation-playbook-compiler-and-cloudformation-auditing)
    - [Real-Time WebSockets Timeline with Regex Parsing](#real-time-websockets-timeline-with-regex-parsing)
    - [Baseline Drift Scheduling and Reminders Engine](#baseline-drift-scheduling-and-reminders-engine)
+   - [Client-Side PDF Penetration Test Report Generation](#client-side-pdf-penetration-test-report-generation)
 5. [Database Schema Design](#database-schema-design)
 6. [Conclusion](#conclusion)
 
@@ -155,6 +156,18 @@ The scan results interface displays execution timeline segments streamed from Po
 
 ### Baseline Drift Scheduling and Reminders Engine
 Users can define schedules to run scans periodically (e.g., weekly) to detect configuration drift against baseline snapshots. Because the zero-trust model precludes the storage of access keys, the server triggers a reminder email via Resend when a scheduled scan is due. This email requests that the user log in and provide their temporary AWS credentials to execute the drift evaluation scan.
+
+### Client-Side PDF Penetration Test Report Generation
+To support reporting and compliance workflows, Cirrus includes a client-side PDF document compilation system built with `jsPDF` and `jsPDF-autotable`.
+* **Execution**: When a scan status transitions to `complete`, the user interface displays a "Download Report" action button.
+* **Compilation**: Clicking the button triggers an in-memory document compilation loop. The client gathers scan metadata and all linked findings.
+* **Document Structure**: Generates a professional multi-page document featuring:
+  - Title page with target account identifiers, scan region, and timestamps.
+  - Executive summary paragraph describing the scope.
+  - A structured findings distribution table segmented by severity.
+  - Detailed findings section displaying the resource name, severity badge, and AI description for each vulnerability.
+  - Dynamic page numbering footer (e.g., "Page X of Y").
+* **Zero Server Overhead**: The PDF is compiled entirely on the client, eliminating server-side rendering loads and ensuring report contents are never cached on the backend filesystem.
 
 ---
 
