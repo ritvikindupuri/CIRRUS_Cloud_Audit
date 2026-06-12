@@ -46,7 +46,7 @@ function Landing() {
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 font-sans overflow-x-hidden">
       <header className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-border/20">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <CirrusLogo size={40} />
+          <CirrusLogo size={56} />
           <nav className="flex items-center gap-4">
             <Link to="/auth">
               <Button
