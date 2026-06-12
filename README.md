@@ -25,47 +25,19 @@ Cirrus is a cloud security platform that deploys autonomous, context-aware AI ag
 
 ```mermaid
 graph TD
-    classDef client fill:#1e1b4b,stroke:#6366f1,stroke-width:2px,color:#a5b4fc;
-    classDef server fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#7dd3fc;
-    classDef database fill:#022c22,stroke:#10b981,stroke-width:1.5px,color:#6ee7b7;
-    classDef gemini fill:#431407,stroke:#ea580c,stroke-width:1.5px,color:#ffedd5;
-    classDef aws fill:#1e293b,stroke:#f59e0b,stroke-width:1.5px,color:#fef08a;
+    Client["Client Browser SPA<br/>TanStack Start and Router UI"]
+    SessionStorage["sessionStorage<br/>Temporary AWS Keys"]
+    Server["Server Functions (API Engine)<br/>Secure RPC Gateway"]
+    Database["Supabase Database<br/>Scans, Findings, Steps"]
+    Gemini["Google Gemini AI<br/>gemini-3.5-flash"]
+    AWS["Target AWS Cloud Context<br/>S3, IAM, EC2, RDS, Lambda, DDB, KMS, CloudTrail, CFN"]
 
-    ClientNode["Client SPA (Browser)<br/>TanStack Start and Router UI"]:::client
-    SessionStore["sessionStorage<br/>Temporary AWS Keys"]:::client
-    ServerNode["Server Functions (TanStack Start)<br/>Secure RPC Gateway"]:::server
-    DBNode["Supabase PostgreSQL<br/>Scans, Findings, Steps"]:::database
-    GeminiNode["Google Gemini API<br/>gemini-3.5-flash"]:::gemini
-    
-    subgraph AWS ["Target AWS Cloud Context"]
-        AWS_STS["AWS STS (Security Token Service)"]:::aws
-        AWS_IAM["AWS IAM (Identity and Access Management)"]:::aws
-        AWS_S3["AWS S3 (Simple Storage Service)"]:::aws
-        AWS_EC2["AWS EC2 (Elastic Compute Cloud)"]:::aws
-        AWS_RDS["AWS RDS (Relational Database Service)"]:::aws
-        AWS_Lambda["AWS Lambda (Serverless Compute)"]:::aws
-        AWS_DDB["AWS DynamoDB (NoSQL Database)"]:::aws
-        AWS_KMS["AWS KMS (Key Management Service)"]:::aws
-        AWS_Trail["AWS CloudTrail (Audit Logs)"]:::aws
-        AWS_CFN["AWS CloudFormation (Remediation Stack)"]:::aws
-    end
-
-    ClientNode <-->|Read/Write| SessionStore
-    ClientNode -->|Call RPC with Keys| ServerNode
-    ServerNode -->|Write Steps/Findings| DBNode
-    DBNode -.->|Real-time WebSocket Stream| ClientNode
-    ServerNode <-->|ReAct loop| GeminiNode
-    
-    ServerNode -->|Verify Keys| AWS_STS
-    ServerNode -->|Audit Config| AWS_IAM
-    ServerNode -->|Audit Config| AWS_S3
-    ServerNode -->|Audit Config| AWS_EC2
-    ServerNode -->|Audit Config| AWS_RDS
-    ServerNode -->|Audit Config| AWS_Lambda
-    ServerNode -->|Audit Config| AWS_DDB
-    ServerNode -->|Audit Config| AWS_KMS
-    ServerNode -->|Audit Config| AWS_Trail
-    ServerNode -->|Apply Playbooks| AWS_CFN
+    Client <--> SessionStorage
+    Client -->|1. Dispatch scan request with keys| Server
+    Server <-->|2. Autonomous reasoning / tool prompts| Gemini
+    Server -->|3. Query audit / deploy fixes| AWS
+    Server -->|4. Log timeline steps & findings| Database
+    Database -.->|5. Real-time WebSocket updates| Client
 ```
 <p align="center"><strong>Figure 1: Cirrus Zero-Trust Orchestration Architecture</strong></p>
 
