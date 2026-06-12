@@ -49,7 +49,6 @@ const POLICY_JSON = `{
         "iam:DeleteRolePolicy",
         "iam:AttachRolePolicy",
         "iam:DetachRolePolicy",
-        "iam:PassRole",
         "cloudformation:CreateChangeSet",
         "cloudformation:DescribeChangeSet",
         "cloudformation:ExecuteChangeSet",
@@ -62,7 +61,6 @@ const POLICY_JSON = `{
         "s3:PutBucketPolicy",
         "s3:PutBucketPublicAccessBlock",
         "s3:PutEncryptionConfiguration",
-        "s3:PutBucketEncryption",
         "s3:PutBucketVersioning",
         "s3:PutLifecycleConfiguration",
         "ec2:CreateSecurityGroup",
@@ -94,6 +92,20 @@ const POLICY_JSON = `{
         "cloudtrail:DeleteTrail"
       ],
       "Resource": "*"
+    },
+    {
+      "Sid": "CirrusRemediationPassRole",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": [
+            "cloudformation.amazonaws.com",
+            "lambda.amazonaws.com"
+          ]
+        }
+      }
     }
   ]
 }`;
