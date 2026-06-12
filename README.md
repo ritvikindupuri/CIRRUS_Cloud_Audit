@@ -1,5 +1,7 @@
 # Cirrus
 > **Autonomous Zero-Trust Cloud Pentesting and Drift Remediation**
+>
+> Read the [Technical Documentation](TECHNICAL_DOCUMENTATION.md) for detailed architecture, design specifications, and database schemas.
 
 Cirrus is a cloud security platform that deploys autonomous, context-aware AI agents to perform security audits, identify misconfigurations, and deploy automated, audited remediations on target AWS environments. Designed with a strict zero-trust posture, Cirrus handles runtime AWS credential payloads in-memory, completely avoiding the persistence of access keys in the database.
 
