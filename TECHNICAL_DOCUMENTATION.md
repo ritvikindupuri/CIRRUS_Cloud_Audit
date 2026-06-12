@@ -52,23 +52,39 @@ graph TD
     Server <-->|2. Autonomous reasoning / tool prompts| Gemini
     Server -->|3. Query audit / deploy fixes| AWS
     Server -->|4. Log timeline steps & findings| Database
-    Database -.-->|5. Real-time WebSocket updates| Client
+    Database -.->|5. Real-time WebSocket updates| Client
 ```
 <p align="center"><strong>Figure 1: Cirrus System Architecture and Orchestration Gateway</strong></p>
 
 ### System Components
 
 #### Client Tier
-A Single Page Application (SPA) built using React, TanStack Start, and Tailwind CSS. The client orchestrates the temporary storage of target credentials inside the browser's `sessionStorage` context. It subscribes to Supabase Realtime WebSocket changes to feed data to the timeline views.
+The user interface is structured as a React Single Page Application (SPA) utilizing TanStack Start for client-side routing hydration and state management. 
+* **State Management**: Session variables (`accessKeyId`, `secretAccessKey`, `sessionToken`, `region`) are captured in memory and stored locally in the browser's `sessionStorage`. When the user is on pages like `/scans/new` or `/scans/$scanId`, UI components load credentials dynamically using the `getAwsCreds()` hook from `aws-creds.ts`. 
+* **Real-time Event Streaming**: Managed by instantiating a Supabase WebSocket connection. The app subscribes to table changes:
+  ```typescript
+  supabase
+    .channel('public:agent_steps')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'agent_steps' }, (payload) => {
+      // Append step detail to state timeline array
+    })
+    .subscribe();
+  ```
+  This listener enables live thought logging in `execution-timeline.tsx` as soon as the database receives an entry.
 
 #### Backend API Tier
-Implemented as type-safe Server Functions running on the TanStack Start framework (powered by the Nitro server engine). These server functions act as secure RPC endpoints, intercepting user-provided AWS credentials, initializing the agent loops, and immediately discarding credentials upon request termination.
+Implemented as type-safe Server Functions using the TanStack Start framework (`createServerFn()`), mapped onto the Nitro server engine. Standard RPC methods include `runScan`, `replayAgentNode`, `runScheduledScan`, and `generateRemediation`.
+* **Request Validation**: Incoming requests are validated structurally using Zod schemas (`AwsCredsSchema`, `StartScanInput`). 
+* **JWT Authentication**: Auth is enforced via custom middleware (`requireSupabaseAuth`), which decodes the token from the request header, verifies the session, and injects `context.supabase` and `context.userId` parameters into the function runtime context.
+* **Transient Payload Handling**: The server intercepts the temporary AWS keys in the request payload, initializes the SDK client constructors in-memory, runs the executor loop, and clears the context variables immediately. No credential values are logged, serialized, or written to server disk.
 
 #### Persistent Storage Tier
-A Supabase PostgreSQL database holding scan records, scheduled baselines, vulnerabilities, and detailed agent thought histories. It maintains no references to AWS Access Keys or Secret Keys.
+A PostgreSQL database hosted on Supabase. The database architecture separates transaction-heavy step logs from persistent configuration data:
+* **Relational Integrity**: The `agent_runs` table has foreign key constraints linking to `scans.id` with CASCADE deletes, ensuring timeline cleanups. The `agent_steps` table links to `agent_runs.id` to clear intermediate execution artifacts whenever an operator clicks "Replay Node".
+* **Replication**: Table triggers automatically push changes to the Supabase Realtime WebSocket server for immediate client distribution.
 
-#### Core AI Tier
-Driven by `gemini-3.5-flash` using Vercel AI SDK integration. The model acts as the reasoning core for agents and remediation playbooks.
+#### Core AI Integration
+Powered by Vercel AI SDK (`ai`) integrated with the official Google Generative AI Provider (`@ai-sdk/google`) using the `createGoogleGenerativeAI` wrapper. The AI engine handles the translation of LLM responses into structured tool calls and maps tool execution outputs back to the context window of `gemini-3.5-flash`.
 
 ---
 
@@ -112,19 +128,35 @@ graph TD
 ### Core Agent Profiles
 
 #### Recon Agent
-Discovers Caller Identities (`sts:GetCallerIdentity`), lists account aliases, identifies all enabled regions in the account, and checks account-level IAM summary details to detect insecure root configurations.
+Focuses on identifying the boundary configurations of the configured credentials. 
+* **Tools**: Uses `aws_sts_get_caller_identity` (evaluates authenticated role ARN and Account ID), `aws_iam_list_account_aliases`, `aws_ec2_describe_regions` (enumerates active target regions), and `aws_iam_get_account_summary` (checks counts of users, MFA configurations, and password policies).
+* **Vulnerability Criteria**: Flags findings such as root account key usage, lack of active MFA, or over-exposed region parameters.
 
 #### IAM Auditor
-Queries users, active access keys, groups, roles, and attached policies. It flag administrative over-privileges, unrotated credentials, and wildcard policy structures.
+Focuses on mapping user rights and detecting privilege escalations.
+* **Tools**: Calls `aws_iam_list_users` and `aws_iam_list_roles`, then performs secondary checks on high-value entries via `aws_iam_list_attached_user_policies`, `aws_iam_list_attached_role_policies` (checks for `AdministratorAccess` policies), and `aws_iam_list_access_keys`.
+* **Vulnerability Criteria**: Flags wildcard privileges, inactive users with console access, and credentials/keys that have not been rotated in 90 days.
 
 #### S3 Hunter
-Audits all S3 buckets for the presence of bucket policies, public access blocks, and Server-Side Encryption (SSE) details.
+Focuses on bucket settings and data privacy leaks.
+* **Tools**: Begins with `aws_s3_list_buckets` to gather targets. Next, iterates over target buckets (capped at 8 per scan to preserve memory limits) and queries:
+  * `aws_s3_get_public_access_block` (verifies account-level blocks).
+  * `aws_s3_get_bucket_policy_status` (checks for `IsPublic=true` flags).
+  * `aws_s3_get_bucket_encryption` (verifies SSE SSE-KMS configurations).
+* **Vulnerability Criteria**: Flags exposed bucket policies (Critical), disabled public access blocks (High), and disabled server-side encryption (Medium).
 
 #### EC2 / Network Agent
-Scans active security groups and instances within the configured target region. It correlates running public instances with open network routes (e.g. SSH port 22, database ports) open to the world.
+Scans public-facing computing resources and ingress boundaries.
+* **Tools**: Calls `aws_ec2_describe_security_groups` to evaluate active rules, parsing port protocols. Calls `aws_ec2_describe_instances` to capture network interface configurations, public IP mappings, and linked security groups.
+* **Vulnerability Criteria**: Flags wide-open administration ports (SSH/22, RDP/3389) or database ports open to the public (`0.0.0.0/0` or `::/0`), especially when linked to active running computing instances.
 
 #### Custom Agents
-Dynamic agent structures created using the Custom Agent Builder. These compile prompts and map target tools based on five extended target services: RDS, Lambda, DynamoDB, KMS, and CloudTrail.
+Dynamic agent structures created using the Custom Agent Builder. These compile custom system prompts and dynamically map target read-only tools based on five extended target services:
+* **RDS**: `aws_rds_describe_db_instances` (checks storage encryption and public DB flags).
+* **Lambda**: `aws_lambda_list_functions` and `aws_lambda_get_policy` (audits trigger exposures).
+* **DynamoDB**: `aws_dynamodb_list_tables` and `aws_dynamodb_describe_table` (checks KMS keys and table configurations).
+* **KMS**: `aws_kms_list_keys`, `aws_kms_describe_key` (checks key state and rotation), and `aws_kms_get_key_policy` (verifies key access rules).
+* **CloudTrail**: `aws_cloudtrail_describe_trails` and `aws_cloudtrail_get_trail_status` (verifies trail logging states).
 
 ---
 
