@@ -4,7 +4,7 @@
 export type BuiltinAgentType = "recon" | "iam" | "s3" | "ec2";
 export type AgentType = BuiltinAgentType | "custom";
 
-export const AWS_SERVICE_OPTIONS = ["sts", "iam", "s3", "ec2"] as const;
+export const AWS_SERVICE_OPTIONS = ["sts", "iam", "s3", "ec2", "rds", "lambda", "dynamodb", "kms", "cloudtrail"] as const;
 export type AwsService = (typeof AWS_SERVICE_OPTIONS)[number];
 
 export interface AgentDefinition {

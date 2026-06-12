@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CirrusLogo } from "@/components/cirrus-logo";
 import { AWS_SERVICE_OPTIONS, type AwsService } from "@/lib/agents/definitions";
 import { validateCustomAgentDsl } from "@/lib/agents/dsl-validator";
-import { ArrowLeft, Plus, Trash2, Beaker, AlertTriangle, ShieldAlert, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Beaker, AlertTriangle, ShieldAlert, ShieldCheck, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 interface CustomAgent {
@@ -42,6 +42,36 @@ End with a 1-paragraph summary and STOP.`;
 function AgentsPage() {
   const [agents, setAgents] = useState<CustomAgent[]>([]);
   const [editing, setEditing] = useState<Partial<CustomAgent> | null>(null);
+  function handleLoadTemplatePrompt() {
+    if (!editing || !editing.services || editing.services.length === 0) return;
+    const name = editing.name || "Security Auditor";
+    const desc = editing.description ? `Purpose: ${editing.description}\n` : "";
+    const servicesStr = editing.services.join(", ");
+    const servicesSentence = editing.services.join(" and ");
+
+    const template = `You are "${name}", a custom security auditing agent inside Cirrus.
+${desc}
+Your goal: Inspect AWS configurations for security risks and vulnerabilities.
+
+Allowed AWS services you can audit: ${servicesStr}
+
+Steps to execute:
+1. Enumerate the relevant resources using the available AWS tools for ${servicesSentence}.
+2. For each resource, inspect its configuration settings for vulnerabilities.
+3. Call report_finding for anything risky, with:
+   - severity (info/low/medium/high/critical)
+   - a clear, descriptive title
+   - details of the risk
+   - the exact resource name/ARN
+4. Conclude with a clear 1-paragraph summary of your findings, then STOP.
+
+Rules:
+* You are strictly read-only. Do NOT attempt any modifying/mutating actions (like delete, create, modify, attach, detach, stop, start).
+* Before each tool call, write ONE short sentence of reasoning explaining why you are calling it.`;
+
+    setEditing((prev) => prev ? { ...prev, system_prompt: template } : null);
+    toast.success("Prompt template loaded");
+  }
 
   async function load() {
     const { data } = await supabase
@@ -214,9 +244,23 @@ function AgentsPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                  System prompt (the agent's instructions)
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                    System prompt (the agent's instructions)
+                  </Label>
+                  {editing.services && editing.services.length > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      type="button"
+                      onClick={handleLoadTemplatePrompt}
+                      className="h-7 text-xs gap-1.5 border-primary/20 text-primary hover:bg-primary/5 cursor-pointer"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      Load template
+                    </Button>
+                  )}
+                </div>
                 <Textarea
                   value={editing.system_prompt ?? ""}
                   onChange={(e) => setEditing({ ...editing, system_prompt: e.target.value })}

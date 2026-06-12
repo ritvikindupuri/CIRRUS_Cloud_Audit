@@ -207,18 +207,24 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
+          resend_api_key: string | null
+          resend_from_email: string | null
         }
         Insert: {
           created_at?: string
           display_name?: string | null
           email?: string | null
           id: string
+          resend_api_key?: string | null
+          resend_from_email?: string | null
         }
         Update: {
           created_at?: string
           display_name?: string | null
           email?: string | null
           id?: string
+          resend_api_key?: string | null
+          resend_from_email?: string | null
         }
         Relationships: []
       }
@@ -228,6 +234,7 @@ export type Database = {
           change_set_id: string | null
           change_set_name: string | null
           change_set_status: string | null
+          cfn_events: Json
           created_at: string
           error_message: string | null
           executed: boolean
@@ -250,6 +257,7 @@ export type Database = {
           change_set_id?: string | null
           change_set_name?: string | null
           change_set_status?: string | null
+          cfn_events?: Json
           created_at?: string
           error_message?: string | null
           executed?: boolean
@@ -272,6 +280,7 @@ export type Database = {
           change_set_id?: string | null
           change_set_name?: string | null
           change_set_status?: string | null
+          cfn_events?: Json
           created_at?: string
           error_message?: string | null
           executed?: boolean
@@ -366,6 +375,7 @@ export type Database = {
           created_at: string
           custom_agent_ids: string[]
           id: string
+          last_reminded_at: string | null
           last_run_scan_id: string | null
           name: string
           next_run_at: string
@@ -378,6 +388,7 @@ export type Database = {
           created_at?: string
           custom_agent_ids?: string[]
           id?: string
+          last_reminded_at?: string | null
           last_run_scan_id?: string | null
           name: string
           next_run_at?: string
@@ -390,6 +401,7 @@ export type Database = {
           created_at?: string
           custom_agent_ids?: string[]
           id?: string
+          last_reminded_at?: string | null
           last_run_scan_id?: string | null
           name?: string
           next_run_at?: string

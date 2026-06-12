@@ -23,7 +23,17 @@ const POLICY_JSON = `{
         "s3:GetBucketPolicyStatus",
         "s3:GetBucketPublicAccessBlock",
         "s3:GetEncryptionConfiguration",
-        "ec2:Describe*"
+        "ec2:Describe*",
+        "rds:Describe*",
+        "lambda:List*",
+        "lambda:Get*",
+        "dynamodb:List*",
+        "dynamodb:Describe*",
+        "kms:List*",
+        "kms:Describe*",
+        "kms:GetKey*",
+        "cloudtrail:Describe*",
+        "cloudtrail:Get*"
       ],
       "Resource": "*"
     },
@@ -47,7 +57,6 @@ const POLICY_JSON = `{
   ]
 }`;
 
-
 function copy(text: string, label: string) {
   navigator.clipboard.writeText(text);
   toast.success(`${label} copied`);
@@ -67,12 +76,11 @@ export function AwsSetupGuide() {
           Create a read-only IAM user for Cirrus
         </h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Cirrus needs <span className="font-mono text-foreground">List*</span>,{" "}
+          Cirrus only needs <span className="font-mono text-foreground">List*</span>,{" "}
           <span className="font-mono text-foreground">Get*</span>, and{" "}
-          <span className="font-mono text-foreground">Describe*</span> permissions for auditing.
-          The policy below also includes CloudFormation permissions so you can use one-click
-          remediation. Your keys stay in your browser and are sent to our agents only for the
-          duration of a single scan. They are never written to disk on our side.
+          <span className="font-mono text-foreground">Describe*</span> permissions — no writes, no
+          deletes. Your keys stay in your browser and are sent to our agents only for the duration
+          of a single scan. They are never written to disk on our side.
         </p>
       </div>
 
@@ -119,7 +127,7 @@ export function AwsSetupGuide() {
         <AccordionItem value="step-3">
           <AccordionTrigger className="px-3 text-sm">
             <span className="flex items-center gap-3">
-              <StepDot n={3} /> Attach the Cirrus policy (read-only + remediation)
+              <StepDot n={3} /> Attach the Cirrus policy
             </span>
           </AccordionTrigger>
           <AccordionContent className="px-3 pb-4 text-sm text-muted-foreground space-y-3">
@@ -138,18 +146,17 @@ export function AwsSetupGuide() {
               </button>
             </div>
             <p>
-              Name the policy <code className="font-mono text-foreground">CirrusReadOnlyAudit</code>
+              Name the policy <code className="font-mono text-foreground">CirrusAuditPolicy</code>
               , save it, then attach it to the{" "}
               <code className="font-mono text-foreground">cirrus-audit</code> user.
             </p>
-            <p className="text-xs">
-              Prefer a managed policy? You can attach AWS-managed{" "}
-              <code className="font-mono text-foreground">SecurityAudit</code> instead — it grants
-              broader read access (useful if you plan to extend Cirrus), at the cost of more
-              permissions than strictly needed.
-            </p>
-            <div className="rounded border border-amber-200/30 bg-amber-950/20 p-3 text-xs text-amber-100">
-              <strong className="text-amber-200">Important caveat:</strong> The one-click CloudFormation fix feature only works if your scan credentials themselves have <code className="font-mono text-foreground">iam:PutUserPolicy</code> (e.g. a power-user key). A pure read-only audit user can&rsquo;t grant itself write access — AWS won&rsquo;t allow that. For assumed-role / SSO principals, the app will show a clear message instead and you&rsquo;ll need to attach the policy manually.
+            <div className="rounded border border-amber-200 dark:border-amber-800/30 bg-amber-50/50 dark:bg-amber-950/20 p-3 text-xs text-amber-800 dark:text-amber-200 space-y-2">
+              <p>
+                <strong className="text-amber-900 dark:text-amber-100 font-semibold">Remediation permissions included:</strong> This inline policy includes both read-only audit permissions and CloudFormation one-click remediation actions.
+              </p>
+              <p className="text-[11px] leading-relaxed opacity-95">
+                Note that one-click remediation capabilities can only execute if the operator credentials themselves have power-user privileges (e.g., <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 rounded text-amber-900 dark:text-amber-100">iam:PutUserPolicy</code>). A pure read-only key cannot execute stack mutations or modifications without administrative access.
+              </p>
             </div>
           </AccordionContent>
         </AccordionItem>
@@ -210,7 +217,6 @@ export function AwsSetupGuide() {
             </p>
           </AccordionContent>
         </AccordionItem>
-
       </Accordion>
     </div>
   );

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { CirrusLogo } from "@/components/cirrus-logo";
 import { Plus, LogOut, Clock, Check, AlertCircle, Loader2, Beaker, Calendar } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { checkAndSendDriftReminders } from "@/lib/scans.functions";
 
 interface DueSchedule {
   id: string;
@@ -35,6 +36,12 @@ function Dashboard() {
   const [scans, setScans] = useState<Scan[]>([]);
   const [dueSchedules, setDueSchedules] = useState<DueSchedule[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkAndSendDriftReminders().catch((err) => {
+      console.error("Error triggering drift email reminders:", err);
+    });
+  }, []);
 
   useEffect(() => {
     let active = true;

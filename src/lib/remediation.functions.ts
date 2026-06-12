@@ -118,6 +118,23 @@ export const createDryRunChangeSet = createServerFn({ method: "POST" })
       replacement: c.ResourceChange?.Replacement,
     }));
 
+    // Fetch current CloudFormation events for audit logging
+    const { DescribeStackEventsCommand } = await import("@aws-sdk/client-cloudformation");
+    let cfnEvents: unknown[] = [];
+    try {
+      const eventsOut = await client.send(new DescribeStackEventsCommand({ StackName: stackName }));
+      cfnEvents = (eventsOut.StackEvents ?? []).map((ev) => ({
+        timestamp: ev.Timestamp?.toISOString() || new Date().toISOString(),
+        logicalId: ev.LogicalResourceId || "",
+        physicalId: ev.PhysicalResourceId || "",
+        type: ev.ResourceType || "",
+        status: ev.ResourceStatus || "",
+        reason: ev.ResourceStatusReason || "",
+      }));
+    } catch {
+      // Ignored if stack doesn't exist yet
+    }
+
     const { data: dep, error } = await supabase
       .from("remediation_deployments")
       .insert({
@@ -134,6 +151,7 @@ export const createDryRunChangeSet = createServerFn({ method: "POST" })
         template_yaml: template,
         status: status === "FAILED" ? "change_set_failed" : "dry_run",
         error_message: status === "FAILED" ? described?.StatusReason ?? null : null,
+        cfn_events: cfnEvents as any,
       })
       .select("*")
       .single();
@@ -204,6 +222,23 @@ export const executeRemediation = createServerFn({ method: "POST" })
     const ok =
       stackStatus === "CREATE_COMPLETE" || stackStatus === "UPDATE_COMPLETE";
 
+    // Fetch final CloudFormation events for audit logging
+    const { DescribeStackEventsCommand } = await import("@aws-sdk/client-cloudformation");
+    let cfnEvents: unknown[] = [];
+    try {
+      const eventsOut = await client.send(new DescribeStackEventsCommand({ StackName: dep.stack_name }));
+      cfnEvents = (eventsOut.StackEvents ?? []).map((ev) => ({
+        timestamp: ev.Timestamp?.toISOString() || new Date().toISOString(),
+        logicalId: ev.LogicalResourceId || "",
+        physicalId: ev.PhysicalResourceId || "",
+        type: ev.ResourceType || "",
+        status: ev.ResourceStatus || "",
+        reason: ev.ResourceStatusReason || "",
+      }));
+    } catch (e) {
+      console.warn("[remediation] Failed to fetch stack events for audit logs", e);
+    }
+
     await supabase
       .from("remediation_deployments")
       .update({
@@ -212,6 +247,7 @@ export const executeRemediation = createServerFn({ method: "POST" })
         status: ok ? "applied" : "failed",
         change_set_status: stackStatus,
         error_message: ok ? null : reason,
+        cfn_events: cfnEvents as any,
         updated_at: new Date().toISOString(),
       })
       .eq("id", dep.id);
@@ -267,6 +303,24 @@ export const rollbackRemediation = createServerFn({ method: "POST" })
     }
 
     const ok = stackStatus === "DELETE_COMPLETE";
+
+    // Fetch final CloudFormation events for audit logging
+    const { DescribeStackEventsCommand } = await import("@aws-sdk/client-cloudformation");
+    let cfnEvents: unknown[] = [];
+    try {
+      const eventsOut = await client.send(new DescribeStackEventsCommand({ StackName: dep.stack_name }));
+      cfnEvents = (eventsOut.StackEvents ?? []).map((ev) => ({
+        timestamp: ev.Timestamp?.toISOString() || new Date().toISOString(),
+        logicalId: ev.LogicalResourceId || "",
+        physicalId: ev.PhysicalResourceId || "",
+        type: ev.ResourceType || "",
+        status: ev.ResourceStatus || "",
+        reason: ev.ResourceStatusReason || "",
+      }));
+    } catch (e) {
+      console.warn("[remediation] Failed to fetch stack events for audit logs during rollback", e);
+    }
+
     await supabase
       .from("remediation_deployments")
       .update({
@@ -275,6 +329,7 @@ export const rollbackRemediation = createServerFn({ method: "POST" })
         status: ok ? "rolled_back" : "rollback_failed",
         change_set_status: stackStatus,
         error_message: ok ? null : reason,
+        cfn_events: cfnEvents as any,
         updated_at: new Date().toISOString(),
       })
       .eq("id", dep.id);

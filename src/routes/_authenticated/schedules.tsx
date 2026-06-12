@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CirrusLogo } from "@/components/cirrus-logo";
-import { ArrowLeft, Calendar, Trash2, Play, AlertCircle, Clock } from "lucide-react";
+import { ArrowLeft, Calendar, Trash2, Play, AlertCircle, Clock, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { runScheduledScan } from "@/lib/scans.functions";
@@ -43,13 +43,56 @@ function SchedulesPage() {
   const [sk, setSk] = useState("");
   const [st, setSt] = useState("");
 
+  const [resendDialogOpen, setResendDialogOpen] = useState(false);
+  const [resendApiKey, setResendApiKey] = useState("");
+  const [resendFromEmail, setResendFromEmail] = useState("");
+  const [savingResend, setSavingResend] = useState(false);
+
   async function load() {
     const { data } = await supabase.from("scheduled_scans").select("*").order("next_run_at");
     setSchedules((data ?? []) as Schedule[]);
   }
+
+  async function loadResendConfig() {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) return;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("resend_api_key, resend_from_email")
+      .eq("id", userData.user.id)
+      .single();
+    if (profile) {
+      setResendApiKey(profile.resend_api_key ?? "");
+      setResendFromEmail(profile.resend_from_email ?? "");
+    }
+  }
+
   useEffect(() => {
     void load();
+    void loadResendConfig();
   }, []);
+
+  async function saveResendConfig() {
+    setSavingResend(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Not signed in");
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          resend_api_key: resendApiKey.trim() || null,
+          resend_from_email: resendFromEmail.trim() || null,
+        })
+        .eq("id", userData.user.id);
+      if (error) throw error;
+      toast.success("Resend settings updated");
+      setResendDialogOpen(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save settings");
+    } finally {
+      setSavingResend(false);
+    }
+  }
 
   async function remove(id: string) {
     if (!confirm("Delete this schedule? Past scans are kept.")) return;
@@ -117,13 +160,18 @@ function SchedulesPage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-6 py-10">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight">Drift detection schedules</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Periodically re-run the same scan and diff findings against the previous baseline. Since
-            AWS credentials are never stored server-side, Cirrus reminds you when a check is due and
-            you re-enter them in this tab.
-          </p>
+        <div className="mb-8 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Drift detection schedules</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Periodically re-run the same scan and diff findings against the previous baseline. Since
+              AWS credentials are never stored server-side, Cirrus reminds you when a check is due and
+              you re-enter them in this tab.
+            </p>
+          </div>
+          <Button variant="outline" className="shrink-0" onClick={() => setResendDialogOpen(true)}>
+            <Mail className="mr-1.5 h-3.5 w-3.5" /> Email alerts settings
+          </Button>
         </div>
 
         {schedules.length === 0 ? (
@@ -210,6 +258,54 @@ function SchedulesPage() {
               Cancel
             </Button>
             <Button onClick={submitCreds}>Run drift check</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={resendDialogOpen} onOpenChange={setResendDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Email Alerts Configuration</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Cirrus sends email alerts when scheduled drift checks become due. You can configure your own personal **Resend API Key** and **From Email** sender address below.
+            </p>
+            <div>
+              <Label className="text-xs font-medium">Resend API Key</Label>
+              <Input 
+                type="password"
+                value={resendApiKey} 
+                onChange={(e) => setResendApiKey(e.target.value)} 
+                placeholder="re_..."
+                className="mt-1 font-mono text-sm" 
+                autoComplete="off" 
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Get a key from your <a href="https://resend.com/api-keys" target="_blank" rel="noreferrer" className="underline text-primary hover:text-primary/80">Resend Console</a>.
+              </p>
+            </div>
+            <div>
+              <Label className="text-xs font-medium">Sender From Email (Optional)</Label>
+              <Input 
+                value={resendFromEmail} 
+                onChange={(e) => setResendFromEmail(e.target.value)} 
+                placeholder="Cirrus Security <onboarding@resend.dev>"
+                className="mt-1 text-sm" 
+                autoComplete="off" 
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Must be verified in your Resend account. Defaults to <code className="font-mono">onboarding@resend.dev</code> if left blank.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setResendDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveResendConfig} disabled={savingResend}>
+              {savingResend ? "Saving..." : "Save settings"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

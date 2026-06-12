@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Wrench, Copy, ChevronDown, Loader2, Play, Undo2, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Wrench, Copy, ChevronDown, Loader2, Play, Undo2, ShieldCheck, AlertTriangle, Clock } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { generateRemediation } from "@/lib/scans.functions";
 import {
   createDryRunChangeSet,
@@ -70,6 +71,8 @@ function FindingCard({ finding: f }: { finding: Finding }) {
   );
   const [deployment, setDeployment] = useState<Deployment | null>(null);
   const [cfnBusy, setCfnBusy] = useState<"dry" | "apply" | "rollback" | null>(null);
+  const [iamAcknowledged, setIamAcknowledged] = useState(false);
+  const [showAuditLogs, setShowAuditLogs] = useState(false);
 
   useEffect(() => {
     void supabase
@@ -200,6 +203,7 @@ function FindingCard({ finding: f }: { finding: Finding }) {
   }
 
   const hasCfn = typeof remediation?.cloudformation === "string" && (remediation.cloudformation as string).trim().length > 0;
+  const requiresIam = hasCfn && typeof remediation.cloudformation === "string" && remediation.cloudformation.includes("AWS::IAM::");
 
   return (
     <div className="rounded-md border border-border bg-surface">
@@ -273,6 +277,20 @@ function FindingCard({ finding: f }: { finding: Finding }) {
                   <Badge variant="outline" className="font-mono text-[10px]">{deployment.status}</Badge>
                 )}
               </div>
+              {requiresIam && !deployment?.executed && (
+                <div className="mb-3 flex items-start gap-2 rounded bg-amber-500/10 border border-amber-500/30 p-2.5">
+                  <Checkbox 
+                    id={`iam-ack-${f.id}`} 
+                    checked={iamAcknowledged} 
+                    onCheckedChange={(checked) => setIamAcknowledged(checked === true)} 
+                    className="mt-0.5"
+                  />
+                  <label htmlFor={`iam-ack-${f.id}`} className="text-[11px] leading-tight text-amber-500 cursor-pointer">
+                    <strong>Required Capability:</strong> This playbook creates IAM resources and requires <code className="font-mono bg-amber-500/20 px-1 rounded text-foreground">CAPABILITY_NAMED_IAM</code> to deploy.
+                  </label>
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" className="h-7 text-xs" onClick={dryRun} disabled={cfnBusy !== null}>
                   {cfnBusy === "dry" ? (
@@ -286,7 +304,13 @@ function FindingCard({ finding: f }: { finding: Finding }) {
                   size="sm"
                   className="h-7 text-xs"
                   onClick={apply}
-                  disabled={cfnBusy !== null || !deployment || deployment.executed || deployment.change_set_status !== "CREATE_COMPLETE"}
+                  disabled={
+                    cfnBusy !== null || 
+                    !deployment || 
+                    deployment.executed || 
+                    deployment.change_set_status !== "CREATE_COMPLETE" ||
+                    (requiresIam && !iamAcknowledged)
+                  }
                 >
                   {cfnBusy === "apply" ? (
                     <Loader2 className="mr-1 h-3 w-3 animate-spin" />
@@ -312,6 +336,67 @@ function FindingCard({ finding: f }: { finding: Finding }) {
                   </Button>
                 )}
               </div>
+
+              {deployment && (
+                <div className="mt-3 border-t border-border/40 pt-2.5">
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    className="h-5 px-1 text-[10px] text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowAuditLogs(!showAuditLogs)}
+                  >
+                    <Clock className="mr-1 h-3 w-3" />
+                    {showAuditLogs ? "Hide deployment audit logs" : "Show deployment audit logs"}
+                  </Button>
+                  {showAuditLogs && (
+                    <div className="mt-2 space-y-3 bg-surface p-2.5 rounded border border-border">
+                      <div className="grid grid-cols-2 gap-2 text-[10.5px]">
+                        <div>
+                          <span className="text-muted-foreground">Stack Name:</span>{" "}
+                          <span className="font-mono text-foreground">{deployment.stack_name}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Status:</span>{" "}
+                          <Badge variant="outline" className="font-mono text-[9px] uppercase px-1 h-4">{deployment.status}</Badge>
+                        </div>
+                        {deployment.change_set_name && (
+                          <div className="col-span-2">
+                            <span className="text-muted-foreground">Change Set:</span>{" "}
+                            <span className="font-mono text-foreground">{deployment.change_set_name}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Stack Events Audit Trail */}
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                          CloudFormation Event History
+                        </div>
+                        {Array.isArray((deployment as any).cfn_events) && ((deployment as any).cfn_events as any[]).length > 0 ? (
+                          <div className="max-h-48 overflow-y-auto space-y-1.5 border border-border p-2 rounded bg-background">
+                            {((deployment as any).cfn_events as any[]).map((ev: any, i: number) => (
+                              <div key={i} className="font-mono text-[10px] leading-snug border-b border-border/40 last:border-0 pb-1.5 last:pb-0">
+                                <div className="flex justify-between text-[9px] text-muted-foreground">
+                                  <span>{new Date(ev.timestamp).toLocaleString()}</span>
+                                  <span className="text-primary font-semibold">{ev.status}</span>
+                                </div>
+                                <div className="text-foreground">
+                                  {ev.logicalId} <span className="text-muted-foreground">({ev.type})</span>
+                                </div>
+                                {ev.reason && (
+                                  <div className="text-destructive text-[9.5px] mt-0.5">{ev.reason}</div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-muted-foreground italic">No events recorded. Events appear when dry-running or executing.</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               {deployment?.error_message && (
                 <p className="mt-2 flex items-start gap-1 text-[11px] text-destructive">
                   <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />

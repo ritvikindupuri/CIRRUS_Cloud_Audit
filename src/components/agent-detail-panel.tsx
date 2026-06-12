@@ -3,7 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { getAgentDefinition, type AgentType } from "@/lib/agents/definitions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { ChevronRight, Terminal } from "lucide-react";
+import { ChevronRight, Terminal, RotateCw, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { loadCreds } from "@/lib/aws-creds";
+import { replayAgentNode } from "@/lib/scans.functions";
+import { toast } from "sonner";
 
 interface Step {
   id: string;
@@ -29,6 +33,25 @@ interface Run {
 export function AgentDetailPanel({ run }: { run: Run | null }) {
   const [steps, setSteps] = useState<Step[]>([]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [replaying, setReplaying] = useState(false);
+
+  async function replay() {
+    if (!run) return;
+    const creds = loadCreds();
+    if (!creds) {
+      toast.error("AWS credentials are no longer in this tab. Start a new scan to re-enter them.");
+      return;
+    }
+    setReplaying(true);
+    try {
+      await replayAgentNode({ data: { agentRunId: run.id, creds } });
+      toast.success("Agent node re-dispatched");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to replay node");
+    } finally {
+      setReplaying(false);
+    }
+  }
 
   useEffect(() => {
     if (!run) return;
@@ -116,9 +139,27 @@ export function AgentDetailPanel({ run }: { run: Run | null }) {
             style={{ backgroundColor: def.colorVar }}
           />
           <span className="text-sm font-semibold">{def.name}</span>
-          <Badge variant="outline" className="ml-auto font-mono text-[10px] uppercase">
-            {run.status}
-          </Badge>
+          <div className="ml-auto flex items-center gap-2">
+            {(run.status === "complete" || run.status === "error") && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 text-[10px]"
+                onClick={replay}
+                disabled={replaying}
+              >
+                {replaying ? (
+                  <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RotateCw className="mr-1 h-3.5 w-3.5" />
+                )}
+                Replay Node
+              </Button>
+            )}
+            <Badge variant="outline" className="font-mono text-[10px] uppercase">
+              {run.status}
+            </Badge>
+          </div>
         </div>
         <p className="mt-0.5 text-xs text-muted-foreground">{def.tagline}</p>
       </div>
@@ -192,8 +233,8 @@ export function AgentDetailPanel({ run }: { run: Run | null }) {
                         </div>
                         <pre className="terminal max-h-72 overflow-auto text-[11.5px]">
                           {typeof m.result === "string"
-                            ? m.result
-                            : JSON.stringify(m.result, null, 2)}
+                              ? m.result
+                              : JSON.stringify(m.result, null, 2)}
                         </pre>
                       </div>
                     )}

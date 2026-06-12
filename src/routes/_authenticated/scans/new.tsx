@@ -22,8 +22,9 @@ import {
 } from "@/lib/agents/definitions";
 import { saveCreds } from "@/lib/aws-creds";
 import { runScan } from "@/lib/scans.functions";
-import { ArrowLeft, Play, ShieldAlert, Beaker, Calendar } from "lucide-react";
+import { ArrowLeft, Play, ShieldAlert, Beaker, Calendar, Info } from "lucide-react";
 import { toast } from "sonner";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 
 interface CustomAgent {
   id: string;
@@ -354,6 +355,27 @@ function NewScan() {
                   <div className="flex items-center gap-2">
                     <Calendar className="h-3.5 w-3.5 text-primary" />
                     <span className="text-sm font-medium">Save as scheduled drift baseline</span>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span 
+                            className="inline-flex cursor-help items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
+                            onClick={(e) => e.preventDefault()}
+                          >
+                            <Info className="h-3.5 w-3.5" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs p-3 space-y-2 bg-popover text-popover-foreground border border-border shadow-md">
+                          <p className="font-semibold text-xs text-foreground">How the Schedule reminders work</p>
+                          <div className="text-[11px] space-y-1.5 leading-relaxed text-muted-foreground">
+                            <p><strong className="text-foreground">Setting the Cadence:</strong> When you create a scheduled scan, you set a cadence (e.g., every 7 days).</p>
+                            <p><strong className="text-foreground">The "Due Now" Alert:</strong> The database calculates the <code className="font-mono bg-muted px-1 rounded text-foreground">next_run_at</code> timestamp. When that time is reached or passed, the dashboard UI highlights the schedule with a "Due now" alert badge.</p>
+                            <p><strong className="text-foreground">Running the Scan:</strong> To run the due scan, you click "Run now", which prompts you to re-enter your read-only AWS credentials (or uses the keys cached in your browser tab's session memory).</p>
+                            <p><strong className="text-foreground">Updating the Baseline:</strong> Once the scan is run, the system automatically advances the <code className="font-mono bg-muted px-1 rounded text-foreground">next_run_at</code> timestamp by the cadence days (e.g., advances by 7 days).</p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Cirrus will remind you when the next run is due and diff findings against this baseline.

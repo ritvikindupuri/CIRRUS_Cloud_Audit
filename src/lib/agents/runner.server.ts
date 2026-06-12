@@ -29,8 +29,12 @@ import {
   DescribeSecurityGroupsCommand,
   DescribeInstancesCommand,
 } from "@aws-sdk/client-ec2";
+import { RDSClient, DescribeDBInstancesCommand } from "@aws-sdk/client-rds";
+import { LambdaClient, ListFunctionsCommand, GetPolicyCommand } from "@aws-sdk/client-lambda";
+import { DynamoDBClient, ListTablesCommand, DescribeTableCommand } from "@aws-sdk/client-dynamodb";
+import { KMSClient, ListKeysCommand, DescribeKeyCommand, GetKeyRotationStatusCommand, GetKeyPolicyCommand } from "@aws-sdk/client-kms";
+import { CloudTrailClient, DescribeTrailsCommand, GetTrailStatusCommand } from "@aws-sdk/client-cloudtrail";
 
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import type { AgentType, BuiltinAgentType, AwsService } from "@/lib/agents/definitions";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -605,6 +609,473 @@ function makeEc2Tools(ctx: RunCtx) {
   };
 }
 
+function makeRdsTools(ctx: RunCtx) {
+  return {
+    aws_rds_describe_db_instances: tool({
+      description: "RDS DescribeDBInstances — retrieve settings and public exposure flags for RDS databases.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        const cmd = `aws rds describe-db-instances --region ${ctx.creds.region}`;
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_rds_describe_db_instances",
+          tool_input: { command: cmd },
+        });
+        const client = new RDSClient(awsConfig(ctx.creds));
+        try {
+          const out = await client.send(new DescribeDBInstancesCommand({}));
+          const result = {
+            DBInstances: (out.DBInstances ?? []).map((db) => ({
+              DBInstanceIdentifier: db.DBInstanceIdentifier,
+              DBInstanceClass: db.DBInstanceClass,
+              Engine: db.Engine,
+              DBInstanceStatus: db.DBInstanceStatus,
+              PubliclyAccessible: db.PubliclyAccessible,
+              StorageEncrypted: db.StorageEncrypted,
+              DeletionProtection: db.DeletionProtection,
+            })),
+          };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_rds_describe_db_instances",
+            tool_output: { command: cmd, result: summarize(result) },
+          });
+          return result;
+        } catch (e: unknown) {
+          const err = e as { name?: string; message?: string };
+          const result = { error: err.name ?? "Error", message: err.message };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_rds_describe_db_instances",
+            tool_output: { command: cmd, result },
+          });
+          return result;
+        }
+      },
+    }),
+    report_finding: tool({
+      description: "Record a security finding for the scan report.",
+      inputSchema: z.object({
+        severity: z.enum(["info", "low", "medium", "high", "critical"]),
+        title: z.string(),
+        description: z.string().optional(),
+        resource: z.string().optional(),
+      }),
+      execute: async ({ severity, title, description, resource }) => {
+        await addFinding(ctx, { severity, title, description, resource });
+        return { ok: true };
+      },
+    }),
+  };
+}
+
+function makeLambdaTools(ctx: RunCtx) {
+  return {
+    aws_lambda_list_functions: tool({
+      description: "Lambda ListFunctions — list all deployed Lambda functions in the configured region.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        const cmd = `aws lambda list-functions --region ${ctx.creds.region}`;
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_lambda_list_functions",
+          tool_input: { command: cmd },
+        });
+        const client = new LambdaClient(awsConfig(ctx.creds));
+        try {
+          const out = await client.send(new ListFunctionsCommand({}));
+          const result = {
+            Functions: (out.Functions ?? []).map((f) => ({
+              FunctionName: f.FunctionName,
+              FunctionArn: f.FunctionArn,
+              Runtime: f.Runtime,
+              Role: f.Role,
+              LastModified: f.LastModified,
+            })),
+          };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_lambda_list_functions",
+            tool_output: { command: cmd, result: summarize(result) },
+          });
+          return result;
+        } catch (e: unknown) {
+          const err = e as { name?: string; message?: string };
+          const result = { error: err.name ?? "Error", message: err.message };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_lambda_list_functions",
+            tool_output: { command: cmd, result },
+          });
+          return result;
+        }
+      },
+    }),
+    aws_lambda_get_policy: tool({
+      description: "Lambda GetPolicy — retrieve resource-based access policy of a function (look for public triggers or cross-account access).",
+      inputSchema: z.object({ function_name: z.string() }),
+      execute: async ({ function_name }) => {
+        const cmd = `aws lambda get-policy --function-name ${function_name} --region ${ctx.creds.region}`;
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_lambda_get_policy",
+          tool_input: { command: cmd, function_name },
+        });
+        const client = new LambdaClient(awsConfig(ctx.creds));
+        try {
+          const out = await client.send(new GetPolicyCommand({ FunctionName: function_name }));
+          const result = { Policy: out.Policy ? JSON.parse(out.Policy) : null };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_lambda_get_policy",
+            tool_output: { command: cmd, result },
+          });
+          return result;
+        } catch (e: unknown) {
+          const err = e as { name?: string; message?: string };
+          const result = { error: err.name ?? "Error", message: err.message };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_lambda_get_policy",
+            tool_output: { command: cmd, result },
+          });
+          return result;
+        }
+      },
+    }),
+    report_finding: tool({
+      description: "Record a security finding for the scan report.",
+      inputSchema: z.object({
+        severity: z.enum(["info", "low", "medium", "high", "critical"]),
+        title: z.string(),
+        description: z.string().optional(),
+        resource: z.string().optional(),
+      }),
+      execute: async ({ severity, title, description, resource }) => {
+        await addFinding(ctx, { severity, title, description, resource });
+        return { ok: true };
+      },
+    }),
+  };
+}
+
+function makeDynamodbTools(ctx: RunCtx) {
+  return {
+    aws_dynamodb_list_tables: tool({
+      description: "DynamoDB ListTables — list all tables in the configured region.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        const cmd = `aws dynamodb list-tables --region ${ctx.creds.region}`;
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_dynamodb_list_tables",
+          tool_input: { command: cmd },
+        });
+        const client = new DynamoDBClient(awsConfig(ctx.creds));
+        try {
+          const out = await client.send(new ListTablesCommand({}));
+          const result = { TableNames: out.TableNames ?? [] };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_dynamodb_list_tables",
+            tool_output: { command: cmd, result },
+          });
+          return result;
+        } catch (e: unknown) {
+          const err = e as { name?: string; message?: string };
+          const result = { error: err.name ?? "Error", message: err.message };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_dynamodb_list_tables",
+            tool_output: { command: cmd, result },
+          });
+          return result;
+        }
+      },
+    }),
+    aws_dynamodb_describe_table: tool({
+      description: "DynamoDB DescribeTable — retrieve settings, billing mode, encryption details and PITR for a table.",
+      inputSchema: z.object({ table_name: z.string() }),
+      execute: async ({ table_name }) => {
+        const cmd = `aws dynamodb describe-table --table-name ${table_name} --region ${ctx.creds.region}`;
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_dynamodb_describe_table",
+          tool_input: { command: cmd, table_name },
+        });
+        const client = new DynamoDBClient(awsConfig(ctx.creds));
+        try {
+          const out = await client.send(new DescribeTableCommand({ TableName: table_name }));
+          const result = {
+            Table: {
+              TableName: out.Table?.TableName,
+              TableStatus: out.Table?.TableStatus,
+              CreationDateTime: out.Table?.CreationDateTime,
+              TableSizeBytes: out.Table?.TableSizeBytes,
+              ItemCount: out.Table?.ItemCount,
+              SSEDescription: out.Table?.SSEDescription,
+            },
+          };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_dynamodb_describe_table",
+            tool_output: { command: cmd, result },
+          });
+          return result;
+        } catch (e: unknown) {
+          const err = e as { name?: string; message?: string };
+          const result = { error: err.name ?? "Error", message: err.message };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_dynamodb_describe_table",
+            tool_output: { command: cmd, result },
+          });
+          return result;
+        }
+      },
+    }),
+    report_finding: tool({
+      description: "Record a security finding for the scan report.",
+      inputSchema: z.object({
+        severity: z.enum(["info", "low", "medium", "high", "critical"]),
+        title: z.string(),
+        description: z.string().optional(),
+        resource: z.string().optional(),
+      }),
+      execute: async ({ severity, title, description, resource }) => {
+        await addFinding(ctx, { severity, title, description, resource });
+        return { ok: true };
+      },
+    }),
+  };
+}
+
+function makeKmsTools(ctx: RunCtx) {
+  return {
+    aws_kms_list_keys: tool({
+      description: "KMS ListKeys — retrieve all customer master keys (CMKs) in the configured region.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        const cmd = `aws kms list-keys --region ${ctx.creds.region}`;
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_kms_list_keys",
+          tool_input: { command: cmd },
+        });
+        const client = new KMSClient(awsConfig(ctx.creds));
+        try {
+          const out = await client.send(new ListKeysCommand({}));
+          const result = { Keys: out.Keys ?? [] };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_kms_list_keys",
+            tool_output: { command: cmd, result: summarize(result) },
+          });
+          return result;
+        } catch (e: unknown) {
+          const err = e as { name?: string; message?: string };
+          const result = { error: err.name ?? "Error", message: err.message };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_kms_list_keys",
+            tool_output: { command: cmd, result },
+          });
+          return result;
+        }
+      },
+    }),
+    aws_kms_describe_key: tool({
+      description: "KMS DescribeKey — retrieve details for a key (including KeyState, Description, Origin, and automatic key rotation status).",
+      inputSchema: z.object({ key_id: z.string() }),
+      execute: async ({ key_id }) => {
+        const cmd = `aws kms describe-key --key-id ${key_id} --region ${ctx.creds.region} && aws kms get-key-rotation-status --key-id ${key_id}`;
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_kms_describe_key",
+          tool_input: { command: cmd, key_id },
+        });
+        const client = new KMSClient(awsConfig(ctx.creds));
+        try {
+          const desc = await client.send(new DescribeKeyCommand({ KeyId: key_id }));
+          let rotationEnabled = false;
+          try {
+            const rot = await client.send(new GetKeyRotationStatusCommand({ KeyId: key_id }));
+            rotationEnabled = !!rot.KeyRotationEnabled;
+          } catch {
+            // Some key types (e.g. asymmetric, imported keys) do not support automatic rotation
+          }
+          const result = {
+            KeyMetadata: {
+              KeyId: desc.KeyMetadata?.KeyId,
+              Arn: desc.KeyMetadata?.Arn,
+              KeyState: desc.KeyMetadata?.KeyState,
+              Description: desc.KeyMetadata?.Description,
+              Origin: desc.KeyMetadata?.Origin,
+              KeyManager: desc.KeyMetadata?.KeyManager,
+              KeyRotationEnabled: rotationEnabled,
+            },
+          };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_kms_describe_key",
+            tool_output: { command: cmd, result },
+          });
+          return result;
+        } catch (e: unknown) {
+          const err = e as { name?: string; message?: string };
+          const result = { error: err.name ?? "Error", message: err.message };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_kms_describe_key",
+            tool_output: { command: cmd, result },
+          });
+          return result;
+        }
+      },
+    }),
+    aws_kms_get_key_policy: tool({
+      description: "KMS GetKeyPolicy — retrieve key resource-based access policy to audit permissions and wildcards.",
+      inputSchema: z.object({ key_id: z.string(), policy_name: z.string().default("default") }),
+      execute: async ({ key_id, policy_name }) => {
+        const cmd = `aws kms get-key-policy --key-id ${key_id} --policy-name ${policy_name} --region ${ctx.creds.region}`;
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_kms_get_key_policy",
+          tool_input: { command: cmd, key_id, policy_name },
+        });
+        const client = new KMSClient(awsConfig(ctx.creds));
+        try {
+          const out = await client.send(new GetKeyPolicyCommand({ KeyId: key_id, PolicyName: policy_name }));
+          const result = { Policy: out.Policy ? JSON.parse(out.Policy) : null };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_kms_get_key_policy",
+            tool_output: { command: cmd, result },
+          });
+          return result;
+        } catch (e: unknown) {
+          const err = e as { name?: string; message?: string };
+          const result = { error: err.name ?? "Error", message: err.message };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_kms_get_key_policy",
+            tool_output: { command: cmd, result },
+          });
+          return result;
+        }
+      },
+    }),
+    report_finding: tool({
+      description: "Record a security finding for the scan report.",
+      inputSchema: z.object({
+        severity: z.enum(["info", "low", "medium", "high", "critical"]),
+        title: z.string(),
+        description: z.string().optional(),
+        resource: z.string().optional(),
+      }),
+      execute: async ({ severity, title, description, resource }) => {
+        await addFinding(ctx, { severity, title, description, resource });
+        return { ok: true };
+      },
+    }),
+  };
+}
+
+function makeCloudtrailTools(ctx: RunCtx) {
+  return {
+    aws_cloudtrail_describe_trails: tool({
+      description: "CloudTrail DescribeTrails — list logging configurations and target S3 buckets/KMS keys.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        const cmd = `aws cloudtrail describe-trails --region ${ctx.creds.region}`;
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_cloudtrail_describe_trails",
+          tool_input: { command: cmd },
+        });
+        const client = new CloudTrailClient(awsConfig(ctx.creds));
+        try {
+          const out = await client.send(new DescribeTrailsCommand({}));
+          const result = {
+            trailList: (out.trailList ?? []).map((t) => ({
+              Name: t.Name,
+              S3BucketName: t.S3BucketName,
+              KmsKeyId: t.KmsKeyId,
+              HomeRegion: t.HomeRegion,
+              IsMultiRegionTrail: t.IsMultiRegionTrail,
+              LogFileValidationEnabled: t.LogFileValidationEnabled,
+            })),
+          };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_cloudtrail_describe_trails",
+            tool_output: { command: cmd, result: summarize(result) },
+          });
+          return result;
+        } catch (e: unknown) {
+          const err = e as { name?: string; message?: string };
+          const result = { error: err.name ?? "Error", message: err.message };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_cloudtrail_describe_trails",
+            tool_output: { command: cmd, result },
+          });
+          return result;
+        }
+      },
+    }),
+    aws_cloudtrail_get_trail_status: tool({
+      description: "CloudTrail GetTrailStatus — check if a trail is actively logging API activity.",
+      inputSchema: z.object({ name: z.string() }),
+      execute: async ({ name }) => {
+        const cmd = `aws cloudtrail get-trail-status --name ${name} --region ${ctx.creds.region}`;
+        await logStep(ctx, {
+          kind: "tool_call",
+          tool_name: "aws_cloudtrail_get_trail_status",
+          tool_input: { command: cmd, name },
+        });
+        const client = new CloudTrailClient(awsConfig(ctx.creds));
+        try {
+          const out = await client.send(new GetTrailStatusCommand({ Name: name }));
+          const result = {
+            IsLogging: out.IsLogging,
+            LatestDeliveryTime: out.LatestDeliveryTime,
+            LatestNotificationTime: out.LatestNotificationTime,
+          };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_cloudtrail_get_trail_status",
+            tool_output: { command: cmd, result },
+          });
+          return result;
+        } catch (e: unknown) {
+          const err = e as { name?: string; message?: string };
+          const result = { error: err.name ?? "Error", message: err.message };
+          await logStep(ctx, {
+            kind: "tool_result",
+            tool_name: "aws_cloudtrail_get_trail_status",
+            tool_output: { command: cmd, result },
+          });
+          return result;
+        }
+      },
+    }),
+    report_finding: tool({
+      description: "Record a security finding for the scan report.",
+      inputSchema: z.object({
+        severity: z.enum(["info", "low", "medium", "high", "critical"]),
+        title: z.string(),
+        description: z.string().optional(),
+        resource: z.string().optional(),
+      }),
+      execute: async ({ severity, title, description, resource }) => {
+        await addFinding(ctx, { severity, title, description, resource });
+        return { ok: true };
+      },
+    }),
+  };
+}
+
 // ─── System prompts ────────────────────────────────────────────────────────
 
 const SYSTEM_PROMPTS: Record<BuiltinAgentType, string> = {
@@ -674,6 +1145,11 @@ function makeCustomTools(ctx: RunCtx, services: AwsService[]) {
     ...makeIamTools(ctx),
     ...makeS3Tools(ctx),
     ...makeEc2Tools(ctx),
+    ...makeRdsTools(ctx),
+    ...makeLambdaTools(ctx),
+    ...makeDynamodbTools(ctx),
+    ...makeKmsTools(ctx),
+    ...makeCloudtrailTools(ctx),
   } as Record<string, unknown>;
   const allowed = new Set(services);
   const filtered: Record<string, unknown> = { report_finding: all.report_finding };
@@ -714,8 +1190,42 @@ export async function runAgent(params: {
   let system: string;
   if (agentType === "custom") {
     if (!customAgent) throw new Error("Custom agent config missing");
+
+    // Import and validate Custom Agent DSL for safety-rule violations
+    const { validateCustomAgentDsl } = await import("@/lib/agents/dsl-validator");
+    const validation = validateCustomAgentDsl({
+      name: customAgent.name,
+      description: customAgent.description ?? null,
+      system_prompt: customAgent.system_prompt,
+      services: customAgent.services,
+      color: "#a78bfa"
+    });
+
+    if (validation.forbiddenCommands.length > 0) {
+      const blocked = validation.forbiddenCommands.map((cmd) => ({
+        verb: cmd.verb,
+        phrase: cmd.phrase,
+        reason: `Forbidden mutating verb "${cmd.verb}" detected. Custom agents are strictly read-only.`,
+        timestamp: new Date().toISOString(),
+      }));
+
+      // Persist blocked calls to the agent run
+      await supabase
+        .from("agent_runs")
+        .update({ blocked_calls: blocked as any })
+        .eq("id", agentRunId);
+
+      // Log steps in the timeline transcript detailing each safety rule violation
+      for (const cmd of validation.forbiddenCommands) {
+        await logStep(ctx, {
+          kind: "thought",
+          thought: `[SAFETY VIOLATION DETECTED] Blocked forbidden action: "${cmd.phrase}". Reason: Custom agents are restricted to read-only tool access. Mutation verb "${cmd.verb}" is prohibited.`,
+        });
+      }
+    }
+
     const services = (customAgent.services ?? []).filter((s): s is AwsService =>
-      ["sts", "iam", "s3", "ec2"].includes(s),
+      ["sts", "iam", "s3", "ec2", "rds", "lambda", "dynamodb", "kms", "cloudtrail"].includes(s),
     );
     tools = makeCustomTools(ctx, services);
     system = `You are "${customAgent.name}", a user-defined custom agent inside Cirrus, an autonomous AWS pentest platform.
@@ -740,8 +1250,9 @@ Rules:
     system = SYSTEM_PROMPTS[agentType];
   }
 
-  const gateway = createLovableAiGatewayProvider(apiKey);
-  const model = gateway("google/gemini-3-flash-preview");
+  const { createGoogleGenerativeAI } = await import("@ai-sdk/google");
+  const google = createGoogleGenerativeAI({ apiKey });
+  const model = google("gemini-3.5-flash");
 
   try {
     const { text } = await generateText({

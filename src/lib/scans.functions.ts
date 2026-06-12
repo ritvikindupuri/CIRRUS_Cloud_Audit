@@ -4,6 +4,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { AgentType } from "@/lib/agents/definitions";
+import { sendEmailViaResend } from "@/lib/email.server";
 
 const AwsCredsSchema = z.object({
   accessKeyId: z.string().min(16).max(128),
@@ -33,8 +34,8 @@ export const runScan = createServerFn({ method: "POST" })
     if (scanErr || !scan) throw new Error("Scan not found");
     if (scan.status !== "pending") return { ok: true, alreadyRunning: true };
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
 
     await supabase
       .from("scans")
@@ -143,13 +144,13 @@ export const generateRemediation = createServerFn({ method: "POST" })
 
     if (finding.remediation) return finding.remediation as unknown as Remediation;
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
 
     const { generateText } = await import("ai");
-    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-3-flash-preview");
+    const { createGoogleGenerativeAI } = await import("@ai-sdk/google");
+    const google = createGoogleGenerativeAI({ apiKey });
+    const model = google("gemini-3.5-flash");
 
     const prompt = `Generate a remediation playbook for this AWS security finding.
 
@@ -257,3 +258,177 @@ export const runScheduledScan = createServerFn({ method: "POST" })
 
     return { scanId: scan.id };
   });
+
+export const checkAndSendDriftReminders = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+
+    // Get the user's email address and Resend configuration from profiles
+    const { data: profile, error: profileErr } = await supabase
+      .from("profiles")
+      .select("email, display_name, resend_api_key, resend_from_email")
+      .eq("id", userId)
+      .single();
+
+    if (profileErr || !profile?.email) {
+      console.error("[Cirrus Reminders] Profile email not found for user:", userId, profileErr);
+      return { ok: false, error: "User profile or email not found" };
+    }
+
+    const email = profile.email;
+
+    // Fetch all due scheduled scans for this user where:
+    // next_run_at <= now() AND (last_reminded_at IS NULL OR last_reminded_at < next_run_at)
+    const now = new Date().toISOString();
+    const { data: dueSchedules, error: schedErr } = await supabase
+      .from("scheduled_scans")
+      .select("*")
+      .eq("user_id", userId)
+      .lte("next_run_at", now);
+
+    if (schedErr || !dueSchedules) {
+      console.error("[Cirrus Reminders] Failed to query due schedules:", schedErr);
+      return { ok: false, error: "Failed to query due schedules" };
+    }
+
+    const unsentReminders = dueSchedules.filter((s) => {
+      if (!s.last_reminded_at) return true;
+      return new Date(s.last_reminded_at).getTime() < new Date(s.next_run_at).getTime();
+    });
+
+    if (unsentReminders.length === 0) {
+      return { ok: true, sent: 0 };
+    }
+
+    let sentCount = 0;
+    for (const schedule of unsentReminders) {
+      const subject = `[Cirrus Alert] AWS Security Drift Scan Due: ${schedule.name}`;
+      const htmlContent = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <h2 style="color: #ea580c; margin-top: 0;">Cirrus Drift Scan Alert</h2>
+          <p>Hello ${profile.display_name || "there"},</p>
+          <p>This is a reminder that your scheduled AWS security drift scan <strong>"${schedule.name}"</strong> in region <strong>${schedule.region}</strong> is now due.</p>
+          
+          <div style="background-color: #f8fafc; border-left: 4px solid #ea580c; padding: 12px; margin: 20px 0; border-radius: 4px;">
+            <p style="margin: 0; font-weight: bold; font-size: 14px;">Why does this require action?</p>
+            <p style="margin: 4px 0 0 0; font-size: 13px; color: #475569;">
+              Because Cirrus operates on a <strong>zero-trust security model</strong>, your AWS credentials are never stored on our database. To run this scan, you must supply your keys in your active session.
+            </p>
+          </div>
+
+          <p>To run this scan and check for security drift:</p>
+          <ol style="line-height: 1.6;">
+            <li>Log in to your <strong>Cirrus</strong> console.</li>
+            <li>Go to the <strong>Schedules</strong> section.</li>
+            <li>Click <strong>Run now</strong> on the scheduled scan and enter your temporary read-only AWS keys.</li>
+          </ol>
+          
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+          <p style="font-size: 12px; color: #64748b; margin: 0;">
+            This email was automatically generated by Cirrus because you configured a scheduled drift baseline.
+          </p>
+        </div>
+      `;
+
+      const mailRes = await sendEmailViaResend(
+        {
+          to: email,
+          subject,
+          html: htmlContent,
+        },
+        profile.resend_api_key,
+        profile.resend_from_email
+      );
+
+      if (mailRes.ok) {
+        sentCount++;
+        // Update last_reminded_at to avoid double reminders
+        await supabase
+          .from("scheduled_scans")
+          .update({ last_reminded_at: now })
+          .eq("id", schedule.id);
+      } else {
+        console.error(`[Cirrus Reminders] Failed to send email for schedule ${schedule.id}:`, mailRes.error);
+      }
+    }
+
+    return { ok: true, sent: sentCount };
+  });
+
+const ReplayInput = z.object({
+  agentRunId: z.string().uuid(),
+  creds: AwsCredsSchema,
+});
+
+export const replayAgentNode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => ReplayInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { agentRunId, creds } = data;
+
+    // 1. Fetch agent run and authorize
+    const { data: run } = await supabase
+      .from("agent_runs")
+      .select("id, scan_id, agent_type, custom_agent_id")
+      .eq("id", agentRunId)
+      .single();
+    if (!run) throw new Error("Agent run not found");
+
+    const { data: scan } = await supabase
+      .from("scans")
+      .select("user_id")
+      .eq("id", run.scan_id)
+      .single();
+    if (!scan || scan.user_id !== userId) throw new Error("Not authorized");
+
+    // 2. Clear old steps and findings for this run
+    await supabase.from("agent_steps").delete().eq("agent_run_id", agentRunId);
+    await supabase.from("findings").delete().eq("agent_run_id", agentRunId);
+
+    // Reset status to pending
+    await supabase
+      .from("agent_runs")
+      .update({ status: "pending", summary: null, started_at: null, completed_at: null, blocked_calls: [] })
+      .eq("id", agentRunId);
+
+    // 3. Load custom agent config if applicable
+    let customAgent = null;
+    if (run.custom_agent_id) {
+      const { data: custom } = await supabase
+        .from("custom_agents")
+        .select("id, name, description, system_prompt, services")
+        .eq("id", run.custom_agent_id)
+        .single();
+      if (custom) {
+        customAgent = {
+          id: custom.id,
+          name: custom.name,
+          description: custom.description,
+          system_prompt: custom.system_prompt,
+          services: custom.services,
+        };
+      }
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
+
+    const { runAgent } = await import("@/lib/agents/runner.server");
+
+    // 4. Fire async; client listens via realtime subscription
+    void runAgent({
+      supabase,
+      scanId: run.scan_id,
+      agentRunId,
+      agentType: run.agent_type as AgentType,
+      creds,
+      apiKey,
+      customAgent,
+    }).catch(console.error);
+
+    return { ok: true };
+  });
+
+
