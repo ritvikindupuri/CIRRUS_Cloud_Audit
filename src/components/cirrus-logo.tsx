@@ -26,7 +26,7 @@ export function CirrusLogo({
           transform: isometric
             ? "perspective(1200px) rotateX(20deg) rotateY(-25deg) rotateZ(0deg)"
             : "none",
-          boxShadow: isometric ? "-14px 28px 32px rgba(0, 0, 0, 0.25)" : "none",
+          boxShadow: "none",
           transition: "transform 0.3s ease, box-shadow 0.3s ease",
         }}
         className={`object-contain dark:invert`}
