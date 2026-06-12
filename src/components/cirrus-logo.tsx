@@ -23,8 +23,10 @@ export function CirrusLogo({
         style={{
           width: size,
           height: size,
-          transform: isometric ? "rotateX(55deg) rotateZ(-45deg)" : "none",
-          boxShadow: isometric ? "-10px 20px 20px rgba(0, 0, 0, 0.2)" : "none",
+          transform: isometric
+            ? "perspective(1200px) rotateX(20deg) rotateY(-25deg) rotateZ(0deg)"
+            : "none",
+          boxShadow: isometric ? "-14px 28px 32px rgba(0, 0, 0, 0.25)" : "none",
           transition: "transform 0.3s ease, box-shadow 0.3s ease",
         }}
         className={`object-contain dark:invert`}

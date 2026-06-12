@@ -161,10 +161,10 @@ function Landing() {
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-orange-500/15 rounded-full blur-[120px] pointer-events-none" />
 
             <CirrusLogo
-              size={260}
+              size={340}
               withWordmark={false}
               className="opacity-95 relative z-10"
-              isometric={false}
+              isometric={true}
             />
           </motion.div>
         </div>
