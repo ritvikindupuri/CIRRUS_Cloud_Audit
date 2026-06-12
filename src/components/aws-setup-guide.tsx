@@ -26,13 +26,7 @@ const POLICY_JSON = `{
         "ec2:Describe*"
       ],
       "Resource": "*"
-    }
-  ]
-}`;
-
-const REMEDIATION_POLICY = `{
-  "Version": "2012-10-17",
-  "Statement": [
+    },
     {
       "Sid": "CirrusRemediation",
       "Effect": "Allow",
@@ -53,6 +47,7 @@ const REMEDIATION_POLICY = `{
   ]
 }`;
 
+
 function copy(text: string, label: string) {
   navigator.clipboard.writeText(text);
   toast.success(`${label} copied`);
@@ -72,11 +67,12 @@ export function AwsSetupGuide() {
           Create a read-only IAM user for Cirrus
         </h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Cirrus only needs <span className="font-mono text-foreground">List*</span>,{" "}
+          Cirrus needs <span className="font-mono text-foreground">List*</span>,{" "}
           <span className="font-mono text-foreground">Get*</span>, and{" "}
-          <span className="font-mono text-foreground">Describe*</span> permissions — no writes, no
-          deletes. Your keys stay in your browser and are sent to our agents only for the duration
-          of a single scan. They are never written to disk on our side.
+          <span className="font-mono text-foreground">Describe*</span> permissions for auditing.
+          The policy below also includes CloudFormation permissions so you can use one-click
+          remediation. Your keys stay in your browser and are sent to our agents only for the
+          duration of a single scan. They are never written to disk on our side.
         </p>
       </div>
 
@@ -123,7 +119,7 @@ export function AwsSetupGuide() {
         <AccordionItem value="step-3">
           <AccordionTrigger className="px-3 text-sm">
             <span className="flex items-center gap-3">
-              <StepDot n={3} /> Attach the Cirrus read-only policy
+              <StepDot n={3} /> Attach the Cirrus policy (read-only + remediation)
             </span>
           </AccordionTrigger>
           <AccordionContent className="px-3 pb-4 text-sm text-muted-foreground space-y-3">
@@ -152,6 +148,9 @@ export function AwsSetupGuide() {
               broader read access (useful if you plan to extend Cirrus), at the cost of more
               permissions than strictly needed.
             </p>
+            <div className="rounded border border-amber-200/30 bg-amber-950/20 p-3 text-xs text-amber-100">
+              <strong className="text-amber-200">Important caveat:</strong> The one-click CloudFormation fix feature only works if your scan credentials themselves have <code className="font-mono text-foreground">iam:PutUserPolicy</code> (e.g. a power-user key). A pure read-only audit user can&rsquo;t grant itself write access — AWS won&rsquo;t allow that. For assumed-role / SSO principals, the app will show a clear message instead and you&rsquo;ll need to attach the policy manually.
+            </div>
           </AccordionContent>
         </AccordionItem>
 
@@ -212,30 +211,6 @@ export function AwsSetupGuide() {
           </AccordionContent>
         </AccordionItem>
 
-        <AccordionItem value="step-7">
-          <AccordionTrigger className="px-3 text-sm">
-            <span className="flex items-center gap-3">
-              <StepDot n={7} /> (Optional) Enable one-click remediation
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="px-3 pb-4 text-sm text-muted-foreground space-y-3">
-            <p>
-              The one-click CloudFormation fix feature needs permission to create and execute change sets. If you want this, attach an <strong className="text-foreground">additional</strong> inline policy to the same <code className="font-mono text-foreground">cirrus-audit</code> user:
-            </p>
-            <div className="relative">
-              <pre className="terminal max-h-72 overflow-auto pr-12 text-xs">{REMEDIATION_POLICY}</pre>
-              <button
-                onClick={() => copy(REMEDIATION_POLICY, "Remediation policy")}
-                className="absolute right-2 top-2 inline-flex items-center gap-1 rounded border border-border bg-surface px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
-              >
-                <Copy className="h-3 w-3" /> Copy
-              </button>
-            </div>
-            <div className="rounded border border-amber-200/30 bg-amber-950/20 p-3 text-xs text-amber-100">
-              <strong className="text-amber-200">Important caveat:</strong> This only works if your scan credentials themselves have <code className="font-mono text-foreground">iam:PutUserPolicy</code> (e.g. a power-user key). A pure read-only audit user can&rsquo;t grant itself write access — AWS won&rsquo;t allow that. For assumed-role / SSO principals, the app will show a clear message instead and you&rsquo;ll need to attach the policy manually.
-            </div>
-          </AccordionContent>
-        </AccordionItem>
       </Accordion>
     </div>
   );
