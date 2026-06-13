@@ -1,5 +1,5 @@
 # Cirrus
-> **Autonomous Zero-Trust Cloud Pentesting and Drift Remediation**
+> **Autonomous Zero-Trust Cloud Security Auditing and Drift Remediation**
 >
 > Read the [Technical Documentation](TECHNICAL_DOCUMENTATION.md) for detailed architecture, design specifications, and database schemas.
 

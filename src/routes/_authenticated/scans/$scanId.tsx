@@ -24,7 +24,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { runScan } from "@/lib/scans.functions";
 import { loadCreds } from "@/lib/aws-creds";
 import { toast } from "sonner";
-import { generatePentestReport } from "@/lib/report-generator";
+import { generateSecurityReport } from "@/lib/report-generator";
 
 interface ScanRow {
   id: string;
@@ -229,7 +229,7 @@ function ScanDetail() {
             })}
             <Badge variant="outline" className="font-mono text-[10px] uppercase">{scan?.status}</Badge>
             {scan?.status === "complete" && (
-              <Button size="sm" variant="outline" onClick={() => generatePentestReport(scan as any, findings as any)}>
+              <Button size="sm" variant="outline" onClick={() => generateSecurityReport(scan as any, findings as any)}>
                 <Download className="mr-1.5 h-3.5 w-3.5" /> Download Report
               </Button>
             )}

@@ -1155,7 +1155,7 @@ function makeCloudtrailTools(ctx: RunCtx) {
 // ─── System prompts ────────────────────────────────────────────────────────
 
 const SYSTEM_PROMPTS: Record<BuiltinAgentType, string> = {
-  recon: `You are the RECON agent inside Cirrus, an autonomous AWS pentest platform.
+  recon: `You are the RECON agent inside Cirrus, an autonomous AWS security audit platform.
 Your job: confirm the identity of the credentials, list enabled regions, fetch the account summary, and surface high-level posture issues.
 
 Rules:
@@ -1164,7 +1164,7 @@ Rules:
 - Call report_finding for anything notable (e.g. root account has access keys, MFA not enabled on root, very high user counts).
 - When done, write a 1-paragraph summary covering: AWS account ID, alias, IAM ARN you authenticated as, number of enabled regions, and any posture concerns. Then STOP.`,
 
-  iam: `You are the IAM AUDITOR agent inside Cirrus, an autonomous AWS pentest platform.
+  iam: `You are the IAM AUDITOR agent inside Cirrus, an autonomous AWS security audit platform.
 Your job: enumerate IAM users and roles, inspect attached policies, and flag privilege issues.
 
 Rules:
@@ -1179,7 +1179,7 @@ Rules:
 - Use report_finding for each issue.
 - End with a 1-paragraph summary, then STOP.`,
 
-  s3: `You are the S3 HUNTER agent inside Cirrus, an autonomous AWS pentest platform.
+  s3: `You are the S3 HUNTER agent inside Cirrus, an autonomous AWS security audit platform.
 Your job: enumerate S3 buckets and find ones that are publicly exposed, unencrypted, or unprotected.
 
 Rules:
@@ -1193,7 +1193,7 @@ Rules:
 - Use report_finding for each issue.
 - End with a 1-paragraph summary, then STOP.`,
 
-  ec2: `You are the EC2 / NETWORK agent inside Cirrus, an autonomous AWS pentest platform.
+  ec2: `You are the EC2 / NETWORK agent inside Cirrus, an autonomous AWS security audit platform.
 Your job: inspect security groups and instances in the configured region for over-exposure.
 
 Rules:
@@ -1303,7 +1303,7 @@ export async function runAgent(params: {
       ["sts", "iam", "s3", "ec2", "rds", "lambda", "dynamodb", "kms", "cloudtrail"].includes(s),
     );
     tools = makeCustomTools(ctx, services);
-    system = `You are "${customAgent.name}", a user-defined custom agent inside Cirrus, an autonomous AWS pentest platform.
+    system = `You are "${customAgent.name}", a user-defined custom agent inside Cirrus, an autonomous AWS security audit platform.
 
 User-provided instructions:
 ${customAgent.system_prompt}

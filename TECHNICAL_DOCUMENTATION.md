@@ -21,7 +21,7 @@
    - [Remediation Playbook Compiler and CloudFormation Auditing](#remediation-playbook-compiler-and-cloudformation-auditing)
    - [Real-Time WebSockets Timeline with Regex Parsing](#real-time-websockets-timeline-with-regex-parsing)
    - [Baseline Drift Scheduling and Reminders Engine](#baseline-drift-scheduling-and-reminders-engine)
-   - [Client-Side PDF Penetration Test Report Generation](#client-side-pdf-penetration-test-report-generation)
+   - [Client-Side PDF Security Assessment Report Generation](#client-side-pdf-security-assessment-report-generation)
 5. [Database Schema Design](#database-schema-design)
 6. [Conclusion](#conclusion)
 
@@ -199,7 +199,7 @@ The scan results interface displays execution timeline segments streamed from Po
 ### Baseline Drift Scheduling and Reminders Engine
 Users can define schedules to run scans periodically (e.g., weekly) to detect configuration drift against baseline snapshots. Because the zero-trust model precludes the storage of access keys, the server triggers a reminder email via Resend when a scheduled scan is due. This email requests that the user log in and provide their temporary AWS credentials to execute the drift evaluation scan.
 
-### Client-Side PDF Penetration Test Report Generation
+### Client-Side PDF Security Assessment Report Generation
 To support reporting and compliance workflows, Cirrus includes a client-side PDF document compilation system built with `jsPDF` and `jsPDF-autotable`.
 * **Execution**: When a scan status transitions to `complete`, the user interface displays a "Download Report" action button.
 * **Compilation**: Clicking the button triggers an in-memory document compilation loop. The client gathers scan metadata and all linked findings.
@@ -269,4 +269,4 @@ Vulnerabilities reported by agents.
 
 ## Conclusion
 
-Cirrus represents a secure approach to automated cloud penetration testing. By combining an autonomous ReAct loop powered by gemini-3.5-flash with a Zero-Trust key lifecycle, the platform provides deep security auditing without exposing sensitive access keys to database leaks. With its built-in safety validators, structured remediation playbooks, and detailed CloudFormation audit logging, Cirrus provides cloud administrators with a toolset to identify vulnerabilities, monitor configuration drift, and apply fixes safely.
+Cirrus represents a secure approach to automated cloud security assessments. By combining an autonomous ReAct loop powered by gemini-3.5-flash with a Zero-Trust key lifecycle, the platform provides deep security auditing without exposing sensitive access keys to database leaks. With its built-in safety validators, structured remediation playbooks, and detailed CloudFormation audit logging, Cirrus provides cloud administrators with a toolset to identify vulnerabilities, monitor configuration drift, and apply fixes safely.

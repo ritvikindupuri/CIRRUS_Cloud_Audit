@@ -20,7 +20,7 @@ interface FindingData {
   remediation?: Record<string, unknown> | null;
 }
 
-export function generatePentestReport(scan: ScanData, findings: FindingData[]) {
+export function generateSecurityReport(scan: ScanData, findings: FindingData[]) {
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
@@ -156,7 +156,7 @@ export function generatePentestReport(scan: ScanData, findings: FindingData[]) {
 
   doc.setFontSize(22);
   doc.setFont("helvetica", "normal");
-  doc.text("Cloud Penetration Test Report", leftMargin, 97);
+  doc.text("Cloud Security Assessment Report", leftMargin, 97);
 
   // Decorative divider
   doc.setDrawColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
@@ -219,7 +219,7 @@ export function generatePentestReport(scan: ScanData, findings: FindingData[]) {
   doc.setFontSize(10);
   doc.setTextColor(colors.darkText[0], colors.darkText[1], colors.darkText[2]);
   
-  const introText = `This document provides the technical audit details resulting from the automated cloud penetration test executed by Cirrus within the AWS environment. The objective of this automated assessment was to evaluate configuration baselines, detect vulnerabilities (such as open security groups or unencrypted storage), analyze IAM policy boundaries, and compile a secure remediation roadmap.`;
+  const introText = `This document provides the technical audit details resulting from the automated cloud security assessment executed by Cirrus within the AWS environment. The objective of this automated assessment was to evaluate configuration baselines, detect vulnerabilities (such as open security groups or unencrypted storage), analyze IAM policy boundaries, and compile a secure remediation roadmap.`;
   const splitIntro = doc.splitTextToSize(introText, rightMargin - leftMargin);
   doc.text(splitIntro, leftMargin, currentY);
   currentY += (splitIntro.length * 5) + 8;
@@ -237,7 +237,7 @@ export function generatePentestReport(scan: ScanData, findings: FindingData[]) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
   doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-  doc.text("2. Pentest Methodology", leftMargin, currentY);
+  doc.text("2. Assessment Methodology", leftMargin, currentY);
   currentY += 8;
 
   doc.setFont("helvetica", "normal");
@@ -422,7 +422,7 @@ export function generatePentestReport(scan: ScanData, findings: FindingData[]) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       doc.setTextColor(160, 174, 192);
-      doc.text(`Cirrus Pentest Report · Target: ${scan.name}`, leftMargin, 12);
+      doc.text(`Cirrus Security Report · Target: ${scan.name}`, leftMargin, 12);
       doc.line(leftMargin, 14, rightMargin, 14);
     }
     
@@ -436,6 +436,6 @@ export function generatePentestReport(scan: ScanData, findings: FindingData[]) {
 
   // Save Document
   const dateStr = new Date().toISOString().split("T")[0];
-  const filename = `Cirrus_Pentest_Report_${scan.name.replace(/\s+/g, "_")}_${dateStr}.pdf`;
+  const filename = `Cirrus_Security_Report_${scan.name.replace(/\s+/g, "_")}_${dateStr}.pdf`;
   doc.save(filename);
 }
