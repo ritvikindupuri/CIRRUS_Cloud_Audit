@@ -19,9 +19,9 @@ import { ExecutionTimeline } from "@/components/execution-timeline";
 import { CirrusLogo } from "@/components/cirrus-logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, RotateCw, Download, GitCompare, Clock } from "lucide-react";
+import { ArrowLeft, RotateCw, Download, GitCompare, Clock, Loader2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { runScan } from "@/lib/scans.functions";
+import { runScan, generateRemediation } from "@/lib/scans.functions";
 import { loadCreds } from "@/lib/aws-creds";
 import { toast } from "sonner";
 import { generateSecurityReport } from "@/lib/report-generator";
@@ -82,6 +82,7 @@ function ScanDetail() {
   const [customAgents, setCustomAgents] = useState<Record<string, CustomAgentRow>>({});
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [tab, setTab] = useState<"trace" | "timeline" | "findings" | "drift">("trace");
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -191,6 +192,47 @@ function ScanDetail() {
       .catch((e) => toast.error(e instanceof Error ? e.message : "Failed"));
   }
 
+  async function handleDownloadReport() {
+    if (!scan) return;
+    setDownloading(true);
+    try {
+      const missingRemediations = findings.filter((f) => !f.remediation);
+      let updatedFindings = [...findings];
+
+      if (missingRemediations.length > 0) {
+        toast.info(`Generating ${missingRemediations.length} remediation playbook(s) for the report...`);
+        const results = await Promise.all(
+          missingRemediations.map(async (f) => {
+            try {
+              const rem = await generateRemediation({ data: { findingId: f.id } });
+              return { id: f.id, remediation: rem };
+            } catch (err) {
+              console.error(`Failed to generate remediation for finding ${f.id}:`, err);
+              return { id: f.id, remediation: null };
+            }
+          })
+        );
+
+        updatedFindings = findings.map((f) => {
+          const res = results.find((r) => r.id === f.id);
+          if (res && res.remediation) {
+            return { ...f, remediation: res.remediation as any };
+          }
+          return f;
+        });
+
+        setFindings(updatedFindings);
+      }
+
+      generateSecurityReport(scan as any, updatedFindings as any);
+      toast.success("Security report downloaded successfully.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to download report");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   const severityCounts = findings.reduce<Record<string, number>>((acc, f) => {
     acc[f.severity] = (acc[f.severity] ?? 0) + 1;
     return acc;
@@ -229,8 +271,13 @@ function ScanDetail() {
             })}
             <Badge variant="outline" className="font-mono text-[10px] uppercase">{scan?.status}</Badge>
             {scan?.status === "complete" && (
-              <Button size="sm" variant="outline" onClick={() => generateSecurityReport(scan as any, findings as any)}>
-                <Download className="mr-1.5 h-3.5 w-3.5" /> Download Report
+              <Button size="sm" variant="outline" onClick={handleDownloadReport} disabled={downloading}>
+                {downloading ? (
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="mr-1.5 h-3.5 w-3.5" />
+                )}
+                {downloading ? "Generating Report..." : "Download Report"}
               </Button>
             )}
             {scan?.status === "error" && (
