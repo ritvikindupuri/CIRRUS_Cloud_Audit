@@ -90,8 +90,8 @@ Follow these commands to deploy the application locally:
 
 ### 1. Clone and Install
 ```bash
-git clone https://github.com/ritvikindupuri/CIRRUSPenTest.git
-cd CIRRUSPenTest
+git clone https://github.com/ritvikindupuri/CIRRUS_Cloud_Audit.git
+cd CIRRUS_Cloud_Audit
 npm install
 ```
 
