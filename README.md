@@ -1,5 +1,5 @@
-# Cirrus
-> **Autonomous Zero-Trust Cloud Security Auditing and Drift Remediation**
+# Cirrus - Autonomous Zero-Trust Cloud Security Auditing
+> 
 >
 > Read the [Technical Documentation](TECHNICAL_DOCUMENTATION.md) for detailed architecture, design specifications, and database schemas.
 >
