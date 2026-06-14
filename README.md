@@ -2,6 +2,8 @@
 > **Autonomous Zero-Trust Cloud Security Auditing and Drift Remediation**
 >
 > Read the [Technical Documentation](TECHNICAL_DOCUMENTATION.md) for detailed architecture, design specifications, and database schemas.
+>
+> View a [Sample Security Assessment Report (PDF)](Cirrus_Security_Report_PenTest_2026-06-14%20%281%29.pdf) generated from a live scan run with automated CloudFormation remediation.
 
 Cirrus is a cloud security platform that deploys autonomous, context-aware AI agents to perform security audits, identify misconfigurations, and deploy automated, audited remediations on target AWS environments. Designed with a strict zero-trust posture, Cirrus handles runtime AWS credential payloads in-memory, completely avoiding the persistence of access keys in the database.
 
@@ -17,7 +19,7 @@ Cirrus is a cloud security platform that deploys autonomous, context-aware AI ag
   * **EC2 / Network Agent**: Discovers security groups open to the world (0.0.0.0/0) on sensitive ports.
 * **Custom Agent Builder**: Define your own prompts, white-list specific AWS service boundaries (RDS, Lambda, DynamoDB, KMS, CloudTrail), and use safety filters to automatically block mutating instructions.
 * **Real-time Timeline and Regex Search**: Watch agents run live via Supabase WebSockets. Search agent thoughts and tool outputs using exact matching or regular expression pattern filters.
-* **Automated CloudFormation Playbook Remediation**: For every finding, Gemini generates an explanation, rollback playbook, and safe CloudFormation template. Fixes audit execution steps and automatically polls/logs stack events.
+* **Automated CloudFormation Playbook Remediation**: For every finding, Gemini generates an explanation, rollback playbook, and safe CloudFormation template. Fixes audit execution steps and automatically polls/logs stack events. (See the exported [Sample Security Assessment Report (PDF)](Cirrus_Security_Report_PenTest_2026-06-14%20%281%29.pdf) to view real compiled playbooks).
 * **Capability Validation**: Forces explicit acknowledgment of named IAM resource adjustments (CAPABILITY_NAMED_IAM) before applying fixes to safeguard cloud configurations.
 * **Baseline Drift Scheduling**: Define recurring scans to check for drift compared to baseline settings and receive notifications via Resend email integration.
 
