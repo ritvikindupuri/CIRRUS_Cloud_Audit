@@ -27,41 +27,9 @@ Cirrus is a cloud security platform that deploys autonomous, context-aware AI ag
 
 ## System Architecture
 
-```mermaid
-graph TD
-    Client["Client Browser SPA<br/>TanStack Start and Router UI"]
-    SessionStorage["sessionStorage<br/>Temporary AWS Keys"]
-    Server["Server API Gateway<br/>runScan and replayNode RPCs"]
-    
-    subgraph Engine ["Agent Execution Environment"]
-        AgentRunner["Agent Runner Engine<br/>runner.server.ts"]
-        AgentRecon["Recon Agent"]
-        AgentIAM["IAM Auditor Agent"]
-        AgentS3["S3 Hunter Agent"]
-        AgentEC2["EC2 / Network Agent"]
-        AgentCustom["Custom Service Agents"]
-    end
-
-    Database["Supabase Database<br/>agent_steps, agent_runs, findings"]
-    Gemini["Google Gemini AI<br/>gemini-3.5-flash"]
-    AWS["Target AWS Cloud Context<br/>S3, IAM, EC2, RDS, Lambda, DDB, KMS, CloudTrail, CFN"]
-
-    Client <--> SessionStorage
-    Client -->|1. Dispatch scan request with keys| Server
-    Server -->|2. Instantiate runners| AgentRunner
-    
-    AgentRunner --> AgentRecon
-    AgentRunner --> AgentIAM
-    AgentRunner --> AgentS3
-    AgentRunner --> AgentEC2
-    AgentRunner --> AgentCustom
-
-    AgentRecon & AgentIAM & AgentS3 & AgentEC2 & AgentCustom <-->|3. Autonomous ReAct loops| Gemini
-    AgentRecon & AgentIAM & AgentS3 & AgentEC2 & AgentCustom -->|4. Execute read-only tools| AWS
-    AgentRecon & AgentIAM & AgentS3 & AgentEC2 & AgentCustom -->|5. Write steps, logs and findings| Database
-
-    Database -.->|6. Real-time WebSocket updates| Client
-```
+<p align="center">
+  <img src="https://i.imgur.com/qR4uZ6V.png" alt="Cirrus Zero-Trust Orchestration Architecture" width="100%" />
+</p>
 <p align="center"><strong>Figure 1: Cirrus Zero-Trust Orchestration Architecture</strong></p>
 
 ### Flow-by-Flow Explanation
