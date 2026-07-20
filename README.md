@@ -34,13 +34,19 @@ Cirrus is a cloud security platform that deploys autonomous, context-aware AI ag
 
 ### Flow-by-Flow Explanation
 
-1. **Credentials Staging**: When users inputs AWS credentials on the frontend, the keys are cached locally in the client browser's sessionStorage. They are never stored in the database.
-2. **Scan Initiation**: The client initiates an RPC (Remote Procedure Call) request to the server-side runScan function, attaching the credentials in the payload.
-3. **LLM Connection**: The runner loads the agent's context and starts a conversation with gemini-3.5-flash using the Vercel AI SDK.
-4. **Autonomous Tools Query**: The agent makes decision calls. If it chooses to audit a resource, the runner translates this into an AWS SDK V3 client query (S3, EC2, Lambda, RDS, etc.) using the temp keys.
-5. **Timeline Reporting**: Every thought, action, and JSON result is written directly to the Supabase database under agent_steps.
-6. **Real-time Streaming**: PostgreSQL emits changes through WebSockets, and the browser UI dynamically updates the console log timeline in real-time.
-7. **Remediation Plan**: Clicking "Apply CloudFormation fix" executes stack deployments to repair the target system and logs each creation/rollback stack event in real time.
+1. **User Interaction & Dashboard (Step 1)**: The operator accesses the Cirrus web interface to initiate cloud audits, monitor interactive node graphs, review live execution timelines, and manage findings.
+2. **Runtime Credentials Staging (Step 2)**: Temporary AWS credentials (Access Key ID, Secret Access Key, Session Token) are cached strictly in client-side `sessionStorage`. Keys are transmitted securely over SSL to short-lived RPC endpoints and are never persisted in the database.
+3. **Scan Gateway Request (Step 3)**: The frontend dispatches authenticated scan requests to the server API gateway to launch scanning workflows across specified target AWS regions.
+4. **AI Agent Runner Orchestration (Step 4)**: The automated runner engine instantiates specialized AI agents (Recon, IAM Auditor, S3 Hunter, EC2 Network, and Custom Agents with strict service allowlists) powered by Google Gemini.
+5. **AWS Account Auditing (Step 5)**: Agents execute read-only API inspection queries against target AWS resources across configured service boundaries (IAM, S3, EC2, RDS, VPC, KMS, CloudTrail, Lambda, and DynamoDB).
+6. **Findings & Evidence Registration (Step 6)**: Audit findings, technical evidence, risk severity levels, and execution steps are persisted to the Supabase backend and streamed live to the UI via WebSockets.
+7. **AI Remediation Playbook Generation (Step 7)**: For every identified finding, Gemini generates an actionable remediation playbook containing a plain-English risk summary, AWS CLI fix commands, a deployable CloudFormation template, and a rollback plan.
+8. **Governed Deployment & Rollback (Step 8)**: Remediation templates are safely deployed via CloudFormation with dry-run preview change-sets, named IAM capability acknowledgments (`CAPABILITY_NAMED_IAM`), real-time stack event monitoring, and one-click rollback stack deletion.
+
+**Supporting Components**:
+* **Supabase Backend**: Manages agent runs, step logs, findings evidence, and streams real-time updates via WebSockets.
+* **Baseline & Drift Scheduler**: Executes recurring automated audits to detect configuration drift and dispatches email notifications via Resend.
+* **What the User Gets**: Live real-time timelines, evidence-backed cloud findings, custom agents with service allowlists, safe preview/rollback remediations, and exportable, shareable PDF security audit reports.
 
 ---
 
