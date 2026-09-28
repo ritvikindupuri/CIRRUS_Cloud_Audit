@@ -6,6 +6,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { rateLimitAWS } from "@/integrations/supabase/rate-limit-middleware";
+import { logAuditEvent } from "@/lib/audit-logger";
+import { redactObject } from "@/lib/log-redaction";
 
 const AwsCredsSchema = z.object({
   accessKeyId: z.string().min(16).max(128),
@@ -36,18 +39,22 @@ async function cfnClient(creds: z.infer<typeof AwsCredsSchema>) {
 }
 
 export const createDryRunChangeSet = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, rateLimitAWS])
   .inputValidator((input: unknown) => DryRunInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { findingId, creds } = data;
 
+    // Authorization: verify user owns the finding
     const { data: finding } = await supabase
       .from("findings")
       .select("id, scan_id, remediation, title")
       .eq("id", findingId)
       .single();
-    if (!finding) throw new Error("Finding not found");
+    if (!finding) {
+      console.error("[createDryRunChangeSet] Finding not found", { findingId });
+      throw new Error("Finding not found");
+    }
     const remediation = finding.remediation as { cloudformation?: string } | null;
     if (!remediation?.cloudformation?.trim()) {
       throw new Error("No CloudFormation template — generate a playbook first.");
@@ -58,15 +65,26 @@ export const createDryRunChangeSet = createServerFn({ method: "POST" })
       .select("user_id, region")
       .eq("id", finding.scan_id)
       .single();
-    if (!scan || scan.user_id !== userId) throw new Error("Not authorized");
+    if (!scan || scan.user_id !== userId) {
+      console.error("[createDryRunChangeSet] Unauthorized access", { findingId, userId });
+      throw new Error("Not authorized");
+    }
+
+    // Audit log
+    await logAuditEvent({
+      userId,
+      action: "cfn_create_changeset",
+      resourceType: "finding",
+      resourceId: findingId,
+      metadata: { title: finding.title, region: creds.region },
+    });
 
     const template = remediation.cloudformation;
     const stackName = stackNameFor(findingId);
     const changeSetName = `cirrus-${Date.now()}`;
 
-    const { CreateChangeSetCommand, DescribeStacksCommand } = await import(
-      "@aws-sdk/client-cloudformation"
-    );
+    const { CreateChangeSetCommand, DescribeStacksCommand } =
+      await import("@aws-sdk/client-cloudformation");
     const client = await cfnClient(creds);
 
     // Detect whether the stack already exists, decide CREATE vs UPDATE.
@@ -90,9 +108,8 @@ export const createDryRunChangeSet = createServerFn({ method: "POST" })
     );
 
     // Poll until change set leaves CREATE_PENDING / CREATE_IN_PROGRESS.
-    const { DescribeChangeSetCommand: DescribeChangeSetCmd } = await import(
-      "@aws-sdk/client-cloudformation"
-    );
+    const { DescribeChangeSetCommand: DescribeChangeSetCmd } =
+      await import("@aws-sdk/client-cloudformation");
     type DescribeOut = import("@aws-sdk/client-cloudformation").DescribeChangeSetCommandOutput;
     let described: DescribeOut | null = null;
     for (let i = 0; i < 30; i++) {
@@ -101,11 +118,7 @@ export const createDryRunChangeSet = createServerFn({ method: "POST" })
         new DescribeChangeSetCmd({ ChangeSetName: created.Id! }),
       )) as DescribeOut;
       const status = described.Status;
-      if (
-        status === "CREATE_COMPLETE" ||
-        status === "FAILED" ||
-        status === "DELETE_COMPLETE"
-      )
+      if (status === "CREATE_COMPLETE" || status === "FAILED" || status === "DELETE_COMPLETE")
         break;
     }
 
@@ -150,7 +163,7 @@ export const createDryRunChangeSet = createServerFn({ method: "POST" })
         change_set_changes: changes,
         template_yaml: template,
         status: status === "FAILED" ? "change_set_failed" : "dry_run",
-        error_message: status === "FAILED" ? described?.StatusReason ?? null : null,
+        error_message: status === "FAILED" ? (described?.StatusReason ?? null) : null,
         cfn_events: cfnEvents as any,
       })
       .select("*")
@@ -171,29 +184,41 @@ const ExecuteInput = z.object({
 });
 
 export const executeRemediation = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, rateLimitAWS])
   .inputValidator((input: unknown) => ExecuteInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
+    // Authorization: verify user owns the deployment
     const { data: dep } = await supabase
       .from("remediation_deployments")
       .select("*")
       .eq("id", data.deploymentId)
       .eq("user_id", userId)
       .single();
-    if (!dep) throw new Error("Deployment not found");
+    if (!dep) {
+      console.error("[executeRemediation] Deployment not found", {
+        deploymentId: data.deploymentId,
+      });
+      throw new Error("Deployment not found");
+    }
     if (!dep.change_set_id) throw new Error("No change set on this deployment");
     if (dep.executed) throw new Error("Already executed");
 
-    const { ExecuteChangeSetCommand, DescribeStacksCommand } = await import(
-      "@aws-sdk/client-cloudformation"
-    );
+    // Audit log
+    await logAuditEvent({
+      userId,
+      action: "cfn_execute",
+      resourceType: "deployment",
+      resourceId: data.deploymentId,
+      metadata: { stackName: dep.stack_name, region: data.creds.region },
+    });
+
+    const { ExecuteChangeSetCommand, DescribeStacksCommand } =
+      await import("@aws-sdk/client-cloudformation");
     const client = await cfnClient(data.creds);
 
-    await client.send(
-      new ExecuteChangeSetCommand({ ChangeSetName: dep.change_set_id }),
-    );
+    await client.send(new ExecuteChangeSetCommand({ ChangeSetName: dep.change_set_id }));
 
     // Poll stack until terminal.
     let stackStatus = "UPDATE_IN_PROGRESS";
@@ -201,9 +226,7 @@ export const executeRemediation = createServerFn({ method: "POST" })
     for (let i = 0; i < 40; i++) {
       await new Promise((r) => setTimeout(r, 3000));
       try {
-        const out = await client.send(
-          new DescribeStacksCommand({ StackName: dep.stack_name }),
-        );
+        const out = await client.send(new DescribeStacksCommand({ StackName: dep.stack_name }));
         const s = out.Stacks?.[0];
         stackStatus = s?.StackStatus ?? stackStatus;
         reason = s?.StackStatusReason ?? null;
@@ -219,14 +242,15 @@ export const executeRemediation = createServerFn({ method: "POST" })
       }
     }
 
-    const ok =
-      stackStatus === "CREATE_COMPLETE" || stackStatus === "UPDATE_COMPLETE";
+    const ok = stackStatus === "CREATE_COMPLETE" || stackStatus === "UPDATE_COMPLETE";
 
     // Fetch final CloudFormation events for audit logging
     const { DescribeStackEventsCommand } = await import("@aws-sdk/client-cloudformation");
     let cfnEvents: unknown[] = [];
     try {
-      const eventsOut = await client.send(new DescribeStackEventsCommand({ StackName: dep.stack_name }));
+      const eventsOut = await client.send(
+        new DescribeStackEventsCommand({ StackName: dep.stack_name }),
+      );
       cfnEvents = (eventsOut.StackEvents ?? []).map((ev) => ({
         timestamp: ev.Timestamp?.toISOString() || new Date().toISOString(),
         logicalId: ev.LogicalResourceId || "",
@@ -261,24 +285,38 @@ const RollbackInput = z.object({
 });
 
 export const rollbackRemediation = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, rateLimitAWS])
   .inputValidator((input: unknown) => RollbackInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
+    // Authorization: verify user owns the deployment
     const { data: dep } = await supabase
       .from("remediation_deployments")
       .select("*")
       .eq("id", data.deploymentId)
       .eq("user_id", userId)
       .single();
-    if (!dep) throw new Error("Deployment not found");
+    if (!dep) {
+      console.error("[rollbackRemediation] Deployment not found", {
+        deploymentId: data.deploymentId,
+      });
+      throw new Error("Deployment not found");
+    }
     if (!dep.executed) throw new Error("Nothing to roll back — fix was not applied");
     if (dep.rolled_back) throw new Error("Already rolled back");
 
-    const { DeleteStackCommand, DescribeStacksCommand } = await import(
-      "@aws-sdk/client-cloudformation"
-    );
+    // Audit log
+    await logAuditEvent({
+      userId,
+      action: "cfn_rollback",
+      resourceType: "deployment",
+      resourceId: data.deploymentId,
+      metadata: { stackName: dep.stack_name, region: data.creds.region },
+    });
+
+    const { DeleteStackCommand, DescribeStacksCommand } =
+      await import("@aws-sdk/client-cloudformation");
     const client = await cfnClient(data.creds);
 
     await client.send(new DeleteStackCommand({ StackName: dep.stack_name }));
@@ -288,9 +326,7 @@ export const rollbackRemediation = createServerFn({ method: "POST" })
     for (let i = 0; i < 40; i++) {
       await new Promise((r) => setTimeout(r, 3000));
       try {
-        const out = await client.send(
-          new DescribeStacksCommand({ StackName: dep.stack_name }),
-        );
+        const out = await client.send(new DescribeStacksCommand({ StackName: dep.stack_name }));
         const s = out.Stacks?.[0];
         stackStatus = s?.StackStatus ?? stackStatus;
         reason = s?.StackStatusReason ?? null;
@@ -308,7 +344,9 @@ export const rollbackRemediation = createServerFn({ method: "POST" })
     const { DescribeStackEventsCommand } = await import("@aws-sdk/client-cloudformation");
     let cfnEvents: unknown[] = [];
     try {
-      const eventsOut = await client.send(new DescribeStackEventsCommand({ StackName: dep.stack_name }));
+      const eventsOut = await client.send(
+        new DescribeStackEventsCommand({ StackName: dep.stack_name }),
+      );
       cfnEvents = (eventsOut.StackEvents ?? []).map((ev) => ({
         timestamp: ev.Timestamp?.toISOString() || new Date().toISOString(),
         logicalId: ev.LogicalResourceId || "",
@@ -400,9 +438,9 @@ const CIRRUS_POLICY_DOC = JSON.stringify({
         "cloudtrail:UpdateTrail",
         "cloudtrail:StartLogging",
         "cloudtrail:StopLogging",
-        "cloudtrail:DeleteTrail"
+        "cloudtrail:DeleteTrail",
       ],
-      "Resource": "*",
+      Resource: "*",
     },
     {
       Effect: "Allow",
@@ -410,21 +448,26 @@ const CIRRUS_POLICY_DOC = JSON.stringify({
       Resource: "*",
       Condition: {
         StringEquals: {
-          "iam:PassedToService": [
-            "cloudformation.amazonaws.com",
-            "lambda.amazonaws.com"
-          ]
-        }
-      }
-    }
+          "iam:PassedToService": ["cloudformation.amazonaws.com", "lambda.amazonaws.com"],
+        },
+      },
+    },
   ],
 });
 
 export const bootstrapRemediationPermissions = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, rateLimitAWS])
   .inputValidator((input: unknown) => BootstrapInput.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
     const { creds } = data;
+
+    // Audit log
+    await logAuditEvent({
+      userId,
+      action: "agent_bootstrap",
+      metadata: { region: creds.region },
+    });
     const { STSClient, GetCallerIdentityCommand } = await import("@aws-sdk/client-sts");
     const sts = new STSClient({
       region: creds.region,
