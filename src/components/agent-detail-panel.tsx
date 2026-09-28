@@ -233,8 +233,8 @@ export function AgentDetailPanel({ run }: { run: Run | null }) {
                         </div>
                         <pre className="terminal max-h-72 overflow-auto text-[11.5px]">
                           {typeof m.result === "string"
-                              ? m.result
-                              : JSON.stringify(m.result, null, 2)}
+                            ? m.result
+                            : JSON.stringify(m.result, null, 2)}
                         </pre>
                       </div>
                     )}

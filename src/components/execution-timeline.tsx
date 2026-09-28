@@ -34,13 +34,7 @@ const KIND_OPTIONS = [
   { id: "violation", label: "Violations", icon: ShieldAlert },
 ] as const;
 
-export function ExecutionTimeline({
-  scanId,
-  runs,
-}: {
-  scanId: string;
-  runs: RunMeta[];
-}) {
+export function ExecutionTimeline({ scanId, runs }: { scanId: string; runs: RunMeta[] }) {
   const [steps, setSteps] = useState<Step[]>([]);
   const [query, setQuery] = useState("");
   const [isRegex, setIsRegex] = useState(false);
@@ -98,7 +92,9 @@ export function ExecutionTimeline({
   );
 
   const isSafetyViolation = (s: Step) => {
-    return s.kind === "thought" && !!s.thought && s.thought.startsWith("[SAFETY VIOLATION DETECTED]");
+    return (
+      s.kind === "thought" && !!s.thought && s.thought.startsWith("[SAFETY VIOLATION DETECTED]")
+    );
   };
 
   // Validate regular expression whenever query or isRegex changes
@@ -175,7 +171,9 @@ export function ExecutionTimeline({
             s.error ?? "",
             s.tool_input ? JSON.stringify(s.tool_input) : "",
             s.tool_output ? JSON.stringify(s.tool_output) : "",
-          ].join(" ").toLowerCase();
+          ]
+            .join(" ")
+            .toLowerCase();
 
           return textToMatch.includes(q) || agentName.toLowerCase().includes(q);
         });
@@ -223,7 +221,7 @@ export function ExecutionTimeline({
         return `[${t}] ${name} · thought\n${s.thought ?? ""}\n`;
       }
       if (s.kind === "final")
-        return `[${t}] ${name} · final\n${s.error ? "ERROR: " + s.error : s.thought ?? ""}\n`;
+        return `[${t}] ${name} · final\n${s.error ? "ERROR: " + s.error : (s.thought ?? "")}\n`;
       if (s.kind === "tool_call") {
         const cmd = (s.tool_input as { command?: string })?.command ?? s.tool_name;
         return `[${t}] ${name} · $ ${cmd}`;
@@ -322,8 +320,12 @@ export function ExecutionTimeline({
       </div>
 
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-        <span>{filtered.length} of {sorted.length} entries</span>
-        {regexError && <span className="text-destructive font-semibold lowercase">Invalid regex expression</span>}
+        <span>
+          {filtered.length} of {sorted.length} entries
+        </span>
+        {regexError && (
+          <span className="text-destructive font-semibold lowercase">Invalid regex expression</span>
+        )}
       </div>
 
       <ScrollArea className="flex-1">
@@ -350,7 +352,10 @@ export function ExecutionTimeline({
 
             if (violation) {
               return (
-                <div key={s.id} className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2">
+                <div
+                  key={s.id}
+                  className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2"
+                >
                   <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-destructive">
                     <span>{time}</span>
                     {def && (
@@ -362,7 +367,10 @@ export function ExecutionTimeline({
                         {def.name}
                       </span>
                     )}
-                    <Badge variant="outline" className="gap-1 font-mono text-[9px] border-destructive bg-destructive/10 text-destructive">
+                    <Badge
+                      variant="outline"
+                      className="gap-1 font-mono text-[9px] border-destructive bg-destructive/10 text-destructive"
+                    >
                       <ShieldAlert className="h-2.5 w-2.5 animate-pulse" />
                       safety violation
                     </Badge>
@@ -485,7 +493,7 @@ function hl(text: string, q: string, isRegex = false): React.ReactNode {
         result.push(
           <mark key={idx} className="bg-primary/30 text-foreground rounded-sm px-0.5">
             {text.slice(m.start, m.end)}
-          </mark>
+          </mark>,
         );
         lastIdx = m.end;
       });
@@ -498,7 +506,7 @@ function hl(text: string, q: string, isRegex = false): React.ReactNode {
     }
   } else {
     try {
-      const escaped = q.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+      const escaped = q.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
       const regex = new RegExp(escaped, "gi");
       const matches: { start: number; end: number }[] = [];
       let match;
@@ -517,7 +525,7 @@ function hl(text: string, q: string, isRegex = false): React.ReactNode {
         result.push(
           <mark key={idx} className="bg-primary/30 text-foreground rounded-sm px-0.5">
             {text.slice(m.start, m.end)}
-          </mark>
+          </mark>,
         );
         lastIdx = m.end;
       });

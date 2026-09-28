@@ -70,7 +70,11 @@ function Dashboard() {
     const channel = supabase
       .channel("scans:list")
       .on("postgres_changes", { event: "*", schema: "public", table: "scans" }, () => void load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "scheduled_scans" }, () => void load())
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "scheduled_scans" },
+        () => void load(),
+      )
       .subscribe();
     return () => {
       active = false;

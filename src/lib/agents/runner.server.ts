@@ -32,8 +32,18 @@ import {
 import { RDSClient, DescribeDBInstancesCommand } from "@aws-sdk/client-rds";
 import { LambdaClient, ListFunctionsCommand, GetPolicyCommand } from "@aws-sdk/client-lambda";
 import { DynamoDBClient, ListTablesCommand, DescribeTableCommand } from "@aws-sdk/client-dynamodb";
-import { KMSClient, ListKeysCommand, DescribeKeyCommand, GetKeyRotationStatusCommand, GetKeyPolicyCommand } from "@aws-sdk/client-kms";
-import { CloudTrailClient, DescribeTrailsCommand, GetTrailStatusCommand } from "@aws-sdk/client-cloudtrail";
+import {
+  KMSClient,
+  ListKeysCommand,
+  DescribeKeyCommand,
+  GetKeyRotationStatusCommand,
+  GetKeyPolicyCommand,
+} from "@aws-sdk/client-kms";
+import {
+  CloudTrailClient,
+  DescribeTrailsCommand,
+  GetTrailStatusCommand,
+} from "@aws-sdk/client-cloudtrail";
 
 import type { AgentType, BuiltinAgentType, AwsService } from "@/lib/agents/definitions";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -352,7 +362,8 @@ function makeIamTools(ctx: RunCtx) {
       },
     }),
     aws_iam_get_detailed_inventory: tool({
-      description: "IAM GetDetailedInventory — retrieves lists of users, user-attached policies, access keys, roles, and role-attached policies in parallel on the server. Ideal for a fast, comprehensive IAM scan.",
+      description:
+        "IAM GetDetailedInventory — retrieves lists of users, user-attached policies, access keys, roles, and role-attached policies in parallel on the server. Ideal for a fast, comprehensive IAM scan.",
       inputSchema: z.object({}),
       execute: async () => {
         const cmd = "aws iam get-detailed-inventory (bulk retrieve)";
@@ -376,8 +387,12 @@ function makeIamTools(ctx: RunCtx) {
             users.map(async (u) => {
               const userName = u.UserName!;
               const [policies, keys] = await Promise.all([
-                client.send(new ListAttachedUserPoliciesCommand({ UserName: userName })).catch(() => ({ AttachedPolicies: [] })),
-                client.send(new ListAccessKeysCommand({ UserName: userName })).catch(() => ({ AccessKeyMetadata: [] })),
+                client
+                  .send(new ListAttachedUserPoliciesCommand({ UserName: userName }))
+                  .catch(() => ({ AttachedPolicies: [] })),
+                client
+                  .send(new ListAccessKeysCommand({ UserName: userName }))
+                  .catch(() => ({ AccessKeyMetadata: [] })),
               ]);
               return {
                 UserName: userName,
@@ -387,20 +402,22 @@ function makeIamTools(ctx: RunCtx) {
                 AttachedPolicies: policies.AttachedPolicies ?? [],
                 AccessKeys: keys.AccessKeyMetadata ?? [],
               };
-            })
+            }),
           );
 
           const roleDetails = await Promise.all(
             roles.map(async (r) => {
               const roleName = r.RoleName!;
-              const policies = await client.send(new ListAttachedRolePoliciesCommand({ RoleName: roleName })).catch(() => ({ AttachedPolicies: [] }));
+              const policies = await client
+                .send(new ListAttachedRolePoliciesCommand({ RoleName: roleName }))
+                .catch(() => ({ AttachedPolicies: [] }));
               return {
                 RoleName: roleName,
                 Arn: r.Arn,
                 CreateDate: r.CreateDate,
                 AttachedPolicies: policies.AttachedPolicies ?? [],
               };
-            })
+            }),
           );
 
           const result = {
@@ -688,7 +705,8 @@ function makeEc2Tools(ctx: RunCtx) {
 function makeRdsTools(ctx: RunCtx) {
   return {
     aws_rds_describe_db_instances: tool({
-      description: "RDS DescribeDBInstances — retrieve settings and public exposure flags for RDS databases.",
+      description:
+        "RDS DescribeDBInstances — retrieve settings and public exposure flags for RDS databases.",
       inputSchema: z.object({}),
       execute: async () => {
         const cmd = `aws rds describe-db-instances --region ${ctx.creds.region}`;
@@ -748,7 +766,8 @@ function makeRdsTools(ctx: RunCtx) {
 function makeLambdaTools(ctx: RunCtx) {
   return {
     aws_lambda_list_functions: tool({
-      description: "Lambda ListFunctions — list all deployed Lambda functions in the configured region.",
+      description:
+        "Lambda ListFunctions — list all deployed Lambda functions in the configured region.",
       inputSchema: z.object({}),
       execute: async () => {
         const cmd = `aws lambda list-functions --region ${ctx.creds.region}`;
@@ -788,7 +807,8 @@ function makeLambdaTools(ctx: RunCtx) {
       },
     }),
     aws_lambda_get_policy: tool({
-      description: "Lambda GetPolicy — retrieve resource-based access policy of a function (look for public triggers or cross-account access).",
+      description:
+        "Lambda GetPolicy — retrieve resource-based access policy of a function (look for public triggers or cross-account access).",
       inputSchema: z.object({ function_name: z.string() }),
       execute: async ({ function_name }) => {
         const cmd = `aws lambda get-policy --function-name ${function_name} --region ${ctx.creds.region}`;
@@ -870,7 +890,8 @@ function makeDynamodbTools(ctx: RunCtx) {
       },
     }),
     aws_dynamodb_describe_table: tool({
-      description: "DynamoDB DescribeTable — retrieve settings, billing mode, encryption details and PITR for a table.",
+      description:
+        "DynamoDB DescribeTable — retrieve settings, billing mode, encryption details and PITR for a table.",
       inputSchema: z.object({ table_name: z.string() }),
       execute: async ({ table_name }) => {
         const cmd = `aws dynamodb describe-table --table-name ${table_name} --region ${ctx.creds.region}`;
@@ -929,7 +950,8 @@ function makeDynamodbTools(ctx: RunCtx) {
 function makeKmsTools(ctx: RunCtx) {
   return {
     aws_kms_list_keys: tool({
-      description: "KMS ListKeys — retrieve all customer master keys (CMKs) in the configured region.",
+      description:
+        "KMS ListKeys — retrieve all customer master keys (CMKs) in the configured region.",
       inputSchema: z.object({}),
       execute: async () => {
         const cmd = `aws kms list-keys --region ${ctx.creds.region}`;
@@ -961,7 +983,8 @@ function makeKmsTools(ctx: RunCtx) {
       },
     }),
     aws_kms_describe_key: tool({
-      description: "KMS DescribeKey — retrieve details for a key (including KeyState, Description, Origin, and automatic key rotation status).",
+      description:
+        "KMS DescribeKey — retrieve details for a key (including KeyState, Description, Origin, and automatic key rotation status).",
       inputSchema: z.object({ key_id: z.string() }),
       execute: async ({ key_id }) => {
         const cmd = `aws kms describe-key --key-id ${key_id} --region ${ctx.creds.region} && aws kms get-key-rotation-status --key-id ${key_id}`;
@@ -1010,7 +1033,8 @@ function makeKmsTools(ctx: RunCtx) {
       },
     }),
     aws_kms_get_key_policy: tool({
-      description: "KMS GetKeyPolicy — retrieve key resource-based access policy to audit permissions and wildcards.",
+      description:
+        "KMS GetKeyPolicy — retrieve key resource-based access policy to audit permissions and wildcards.",
       inputSchema: z.object({ key_id: z.string(), policy_name: z.string().default("default") }),
       execute: async ({ key_id, policy_name }) => {
         const cmd = `aws kms get-key-policy --key-id ${key_id} --policy-name ${policy_name} --region ${ctx.creds.region}`;
@@ -1021,7 +1045,9 @@ function makeKmsTools(ctx: RunCtx) {
         });
         const client = new KMSClient(awsConfig(ctx.creds));
         try {
-          const out = await client.send(new GetKeyPolicyCommand({ KeyId: key_id, PolicyName: policy_name }));
+          const out = await client.send(
+            new GetKeyPolicyCommand({ KeyId: key_id, PolicyName: policy_name }),
+          );
           const result = { Policy: out.Policy ? JSON.parse(out.Policy) : null };
           await logStep(ctx, {
             kind: "tool_result",
@@ -1060,7 +1086,8 @@ function makeKmsTools(ctx: RunCtx) {
 function makeCloudtrailTools(ctx: RunCtx) {
   return {
     aws_cloudtrail_describe_trails: tool({
-      description: "CloudTrail DescribeTrails — list logging configurations and target S3 buckets/KMS keys.",
+      description:
+        "CloudTrail DescribeTrails — list logging configurations and target S3 buckets/KMS keys.",
       inputSchema: z.object({}),
       execute: async () => {
         const cmd = `aws cloudtrail describe-trails --region ${ctx.creds.region}`;
@@ -1273,7 +1300,7 @@ export async function runAgent(params: {
       description: customAgent.description ?? null,
       system_prompt: customAgent.system_prompt,
       services: customAgent.services,
-      color: "#a78bfa"
+      color: "#a78bfa",
     });
 
     if (validation.forbiddenCommands.length > 0) {
@@ -1363,4 +1390,3 @@ Rules:
     return { summary: `Error: ${message}` };
   }
 }
-

@@ -9,7 +9,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CirrusLogo } from "@/components/cirrus-logo";
 import { AWS_SERVICE_OPTIONS, type AwsService } from "@/lib/agents/definitions";
 import { validateCustomAgentDsl } from "@/lib/agents/dsl-validator";
-import { ArrowLeft, Plus, Trash2, Beaker, AlertTriangle, ShieldAlert, ShieldCheck, FileText } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Beaker,
+  AlertTriangle,
+  ShieldAlert,
+  ShieldCheck,
+  FileText,
+} from "lucide-react";
 import { toast } from "sonner";
 
 interface CustomAgent {
@@ -69,7 +78,7 @@ Rules:
 * You are strictly read-only. Do NOT attempt any modifying/mutating actions (like delete, create, modify, attach, detach, stop, start).
 * Before each tool call, write ONE short sentence of reasoning explaining why you are calling it.`;
 
-    setEditing((prev) => prev ? { ...prev, system_prompt: template } : null);
+    setEditing((prev) => (prev ? { ...prev, system_prompt: template } : null));
     toast.success("Prompt template loaded");
   }
 
@@ -158,8 +167,8 @@ Rules:
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Custom agents</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Write your own checks. Pick which AWS service APIs the agent can call. Cirrus runs them
-              alongside the built-in agents in any scan.
+              Write your own checks. Pick which AWS service APIs the agent can call. Cirrus runs
+              them alongside the built-in agents in any scan.
             </p>
           </div>
           <Button
@@ -179,11 +188,15 @@ Rules:
 
         {editing && (
           <section className="mb-8 rounded-lg border border-primary/40 bg-card p-5">
-            <h3 className="text-sm font-semibold mb-4">{editing.id ? "Edit agent" : "New custom agent"}</h3>
+            <h3 className="text-sm font-semibold mb-4">
+              {editing.id ? "Edit agent" : "New custom agent"}
+            </h3>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Name</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Name
+                  </Label>
                   <Input
                     value={editing.name ?? ""}
                     onChange={(e) => setEditing({ ...editing, name: e.target.value })}
@@ -192,7 +205,9 @@ Rules:
                   />
                 </div>
                 <div>
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Color</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Color
+                  </Label>
                   <div className="mt-1 flex gap-1.5">
                     {COLORS.map((c) => (
                       <button
@@ -206,7 +221,9 @@ Rules:
                 </div>
               </div>
               <div>
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Description</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Description
+                </Label>
                 <Input
                   value={editing.description ?? ""}
                   onChange={(e) => setEditing({ ...editing, description: e.target.value })}
@@ -292,7 +309,10 @@ Rules:
                     <div className="text-[11px] font-mono text-muted-foreground">
                       Blocked phrases:{" "}
                       {validation.forbiddenCommands.slice(0, 4).map((c, i) => (
-                        <span key={i} className="mr-2 rounded bg-destructive/10 px-1.5 py-0.5 text-destructive">
+                        <span
+                          key={i}
+                          className="mr-2 rounded bg-destructive/10 px-1.5 py-0.5 text-destructive"
+                        >
                           {c.phrase}
                         </span>
                       ))}
@@ -304,7 +324,9 @@ Rules:
                 </div>
               )}
               <div className="flex gap-2">
-                <Button onClick={save} disabled={!validation?.ok}>Save agent</Button>
+                <Button onClick={save} disabled={!validation?.ok}>
+                  Save agent
+                </Button>
                 <Button variant="ghost" onClick={() => setEditing(null)}>
                   Cancel
                 </Button>
@@ -327,15 +349,23 @@ Rules:
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: a.color }} />
+                      <span
+                        className="inline-block h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: a.color }}
+                      />
                       <span className="font-medium truncate">{a.name}</span>
                     </div>
                     {a.description && (
-                      <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{a.description}</p>
+                      <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                        {a.description}
+                      </p>
                     )}
                     <div className="mt-2 flex flex-wrap gap-1">
                       {a.services.map((s) => (
-                        <span key={s} className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-surface border border-border">
+                        <span
+                          key={s}
+                          className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-surface border border-border"
+                        >
                           {s}
                         </span>
                       ))}

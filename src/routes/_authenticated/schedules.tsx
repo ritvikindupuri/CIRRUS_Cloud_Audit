@@ -164,9 +164,9 @@ function SchedulesPage() {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Drift detection schedules</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Periodically re-run the same scan and diff findings against the previous baseline. Since
-              AWS credentials are never stored server-side, Cirrus reminds you when a check is due and
-              you re-enter them in this tab.
+              Periodically re-run the same scan and diff findings against the previous baseline.
+              Since AWS credentials are never stored server-side, Cirrus reminds you when a check is
+              due and you re-enter them in this tab.
             </p>
           </div>
           <Button variant="outline" className="shrink-0" onClick={() => setResendDialogOpen(true)}>
@@ -207,10 +207,14 @@ function SchedulesPage() {
                       </div>
                       <div className="mt-1 text-xs text-muted-foreground">
                         Every {s.cadence_days} day{s.cadence_days === 1 ? "" : "s"} · {agentCount}{" "}
-                        agent{agentCount === 1 ? "" : "s"} · {due ? (
+                        agent{agentCount === 1 ? "" : "s"} ·{" "}
+                        {due ? (
                           <span className="text-primary font-medium">Due now</span>
                         ) : (
-                          <>Next run {formatDistanceToNow(new Date(s.next_run_at), { addSuffix: true })}</>
+                          <>
+                            Next run{" "}
+                            {formatDistanceToNow(new Date(s.next_run_at), { addSuffix: true })}
+                          </>
                         )}
                       </div>
                     </div>
@@ -242,15 +246,32 @@ function SchedulesPage() {
             </p>
             <div>
               <Label className="text-xs">Access key ID</Label>
-              <Input value={ak} onChange={(e) => setAk(e.target.value)} className="mt-1 font-mono text-sm" autoComplete="off" />
+              <Input
+                value={ak}
+                onChange={(e) => setAk(e.target.value)}
+                className="mt-1 font-mono text-sm"
+                autoComplete="off"
+              />
             </div>
             <div>
               <Label className="text-xs">Secret access key</Label>
-              <Input type="password" value={sk} onChange={(e) => setSk(e.target.value)} className="mt-1 font-mono text-sm" autoComplete="off" />
+              <Input
+                type="password"
+                value={sk}
+                onChange={(e) => setSk(e.target.value)}
+                className="mt-1 font-mono text-sm"
+                autoComplete="off"
+              />
             </div>
             <div>
               <Label className="text-xs">Session token (optional)</Label>
-              <Input type="password" value={st} onChange={(e) => setSt(e.target.value)} className="mt-1 font-mono text-sm" autoComplete="off" />
+              <Input
+                type="password"
+                value={st}
+                onChange={(e) => setSt(e.target.value)}
+                className="mt-1 font-mono text-sm"
+                autoComplete="off"
+              />
             </div>
           </div>
           <DialogFooter>
@@ -269,33 +290,44 @@ function SchedulesPage() {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Cirrus sends email alerts when scheduled drift checks become due. You can configure your own personal **Resend API Key** and **From Email** sender address below.
+              Cirrus sends email alerts when scheduled drift checks become due. You can configure
+              your own personal **Resend API Key** and **From Email** sender address below.
             </p>
             <div>
               <Label className="text-xs font-medium">Resend API Key</Label>
-              <Input 
+              <Input
                 type="password"
-                value={resendApiKey} 
-                onChange={(e) => setResendApiKey(e.target.value)} 
+                value={resendApiKey}
+                onChange={(e) => setResendApiKey(e.target.value)}
                 placeholder="re_..."
-                className="mt-1 font-mono text-sm" 
-                autoComplete="off" 
+                className="mt-1 font-mono text-sm"
+                autoComplete="off"
               />
               <p className="mt-1 text-[10px] text-muted-foreground">
-                Get a key from your <a href="https://resend.com/api-keys" target="_blank" rel="noreferrer" className="underline text-primary hover:text-primary/80">Resend Console</a>.
+                Get a key from your{" "}
+                <a
+                  href="https://resend.com/api-keys"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline text-primary hover:text-primary/80"
+                >
+                  Resend Console
+                </a>
+                .
               </p>
             </div>
             <div>
               <Label className="text-xs font-medium">Sender From Email (Optional)</Label>
-              <Input 
-                value={resendFromEmail} 
-                onChange={(e) => setResendFromEmail(e.target.value)} 
+              <Input
+                value={resendFromEmail}
+                onChange={(e) => setResendFromEmail(e.target.value)}
                 placeholder="Cirrus Security <onboarding@resend.dev>"
-                className="mt-1 text-sm" 
-                autoComplete="off" 
+                className="mt-1 text-sm"
+                autoComplete="off"
               />
               <p className="mt-1 text-[10px] text-muted-foreground">
-                Must be verified in your Resend account. Defaults to <code className="font-mono">onboarding@resend.dev</code> if left blank.
+                Must be verified in your Resend account. Defaults to{" "}
+                <code className="font-mono">onboarding@resend.dev</code> if left blank.
               </p>
             </div>
           </div>

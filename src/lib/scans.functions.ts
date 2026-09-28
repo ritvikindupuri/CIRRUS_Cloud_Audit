@@ -51,7 +51,16 @@ export const runScan = createServerFn({ method: "POST" })
 
     // Load any custom agent configs referenced by this scan's runs.
     const customIds = runs.map((r) => r.custom_agent_id).filter((x): x is string => !!x);
-    const customMap = new Map<string, { id: string; name: string; description: string | null; system_prompt: string; services: string[] }>();
+    const customMap = new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        description: string | null;
+        system_prompt: string;
+        services: string[];
+      }
+    >();
     if (customIds.length > 0) {
       const { data: customs } = await supabase
         .from("custom_agents")
@@ -72,7 +81,7 @@ export const runScan = createServerFn({ method: "POST" })
             agentType: r.agent_type as AgentType,
             creds,
             apiKey,
-            customAgent: r.custom_agent_id ? customMap.get(r.custom_agent_id) ?? null : null,
+            customAgent: r.custom_agent_id ? (customMap.get(r.custom_agent_id) ?? null) : null,
           }),
         ),
       );
@@ -171,7 +180,10 @@ Respond with ONLY valid JSON in this exact shape (no markdown, no backticks):
     const { text } = await generateText({ model, prompt });
     let parsed: Remediation;
     try {
-      const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
+      const cleaned = text
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/```\s*$/, "")
+        .trim();
       const obj = JSON.parse(cleaned);
       parsed = {
         explanation: String(obj.explanation ?? ""),
@@ -229,8 +241,13 @@ export const runScheduledScan = createServerFn({ method: "POST" })
     if (scanErr || !scan) throw scanErr ?? new Error("Failed to create scan");
 
     const positions = [
-      { x: 0, y: 0 }, { x: 320, y: -120 }, { x: 320, y: 120 }, { x: 640, y: 0 },
-      { x: 640, y: -200 }, { x: 640, y: 200 }, { x: 960, y: 0 },
+      { x: 0, y: 0 },
+      { x: 320, y: -120 },
+      { x: 320, y: 120 },
+      { x: 640, y: 0 },
+      { x: 640, y: -200 },
+      { x: 640, y: 200 },
+      { x: 960, y: 0 },
     ];
     const builtinRuns = (sched.selected_agents as string[]).map((agent_type, i) => ({
       scan_id: scan.id,
@@ -338,7 +355,7 @@ export const checkAndSendDriftReminders = createServerFn({ method: "POST" })
           html: htmlContent,
         },
         profile.resend_api_key,
-        profile.resend_from_email
+        profile.resend_from_email,
       );
 
       if (mailRes.ok) {
@@ -349,7 +366,10 @@ export const checkAndSendDriftReminders = createServerFn({ method: "POST" })
           .update({ last_reminded_at: now })
           .eq("id", schedule.id);
       } else {
-        console.error(`[Cirrus Reminders] Failed to send email for schedule ${schedule.id}:`, mailRes.error);
+        console.error(
+          `[Cirrus Reminders] Failed to send email for schedule ${schedule.id}:`,
+          mailRes.error,
+        );
       }
     }
 
@@ -390,7 +410,13 @@ export const replayAgentNode = createServerFn({ method: "POST" })
     // Reset status to pending
     await supabase
       .from("agent_runs")
-      .update({ status: "pending", summary: null, started_at: null, completed_at: null, blocked_calls: [] })
+      .update({
+        status: "pending",
+        summary: null,
+        started_at: null,
+        completed_at: null,
+        blocked_calls: [],
+      })
       .eq("id", agentRunId);
 
     // 3. Load custom agent config if applicable
@@ -430,5 +456,3 @@ export const replayAgentNode = createServerFn({ method: "POST" })
 
     return { ok: true };
   });
-
-

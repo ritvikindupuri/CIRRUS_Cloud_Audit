@@ -122,8 +122,14 @@ function NewScan() {
       if (scanErr || !scan) throw scanErr ?? new Error("Failed to create scan");
 
       const positions = [
-        { x: 0, y: 0 }, { x: 320, y: -120 }, { x: 320, y: 120 }, { x: 640, y: 0 },
-        { x: 640, y: -200 }, { x: 640, y: 200 }, { x: 960, y: 0 }, { x: 960, y: -120 },
+        { x: 0, y: 0 },
+        { x: 320, y: -120 },
+        { x: 320, y: 120 },
+        { x: 640, y: 0 },
+        { x: 640, y: -200 },
+        { x: 640, y: 200 },
+        { x: 960, y: 0 },
+        { x: 960, y: -120 },
       ];
       const builtinRuns = agents.map((agent_type, i) => ({
         scan_id: scan.id,
@@ -225,7 +231,10 @@ function NewScan() {
               <h3 className="text-sm font-semibold">Scan details</h3>
               <div className="mt-4 space-y-4">
                 <div>
-                  <Label htmlFor="name" className="text-xs uppercase tracking-wider text-muted-foreground">
+                  <Label
+                    htmlFor="name"
+                    className="text-xs uppercase tracking-wider text-muted-foreground"
+                  >
                     Scan name
                   </Label>
                   <Input
@@ -263,27 +272,60 @@ function NewScan() {
               </p>
               <div className="mt-4 space-y-3">
                 <div>
-                  <Label htmlFor="ak" className="text-xs uppercase tracking-wider text-muted-foreground">
+                  <Label
+                    htmlFor="ak"
+                    className="text-xs uppercase tracking-wider text-muted-foreground"
+                  >
                     Access key ID
                   </Label>
-                  <Input id="ak" value={accessKeyId} onChange={(e) => setAccessKeyId(e.target.value)} placeholder="AKIA…" autoComplete="off" className="mt-1 font-mono text-sm" />
+                  <Input
+                    id="ak"
+                    value={accessKeyId}
+                    onChange={(e) => setAccessKeyId(e.target.value)}
+                    placeholder="AKIA…"
+                    autoComplete="off"
+                    className="mt-1 font-mono text-sm"
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="sk" className="text-xs uppercase tracking-wider text-muted-foreground">
+                  <Label
+                    htmlFor="sk"
+                    className="text-xs uppercase tracking-wider text-muted-foreground"
+                  >
                     Secret access key
                   </Label>
-                  <Input id="sk" type="password" value={secretAccessKey} onChange={(e) => setSecretAccessKey(e.target.value)} autoComplete="off" className="mt-1 font-mono text-sm" />
+                  <Input
+                    id="sk"
+                    type="password"
+                    value={secretAccessKey}
+                    onChange={(e) => setSecretAccessKey(e.target.value)}
+                    autoComplete="off"
+                    className="mt-1 font-mono text-sm"
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="st" className="text-xs uppercase tracking-wider text-muted-foreground">
-                    Session token <span className="ml-1 normal-case tracking-normal">(optional)</span>
+                  <Label
+                    htmlFor="st"
+                    className="text-xs uppercase tracking-wider text-muted-foreground"
+                  >
+                    Session token{" "}
+                    <span className="ml-1 normal-case tracking-normal">(optional)</span>
                   </Label>
-                  <Input id="st" type="password" value={sessionToken} onChange={(e) => setSessionToken(e.target.value)} autoComplete="off" className="mt-1 font-mono text-sm" />
+                  <Input
+                    id="st"
+                    type="password"
+                    value={sessionToken}
+                    onChange={(e) => setSessionToken(e.target.value)}
+                    autoComplete="off"
+                    className="mt-1 font-mono text-sm"
+                  />
                 </div>
               </div>
               <div className="mt-4 flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
                 <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                <span>Use a dedicated IAM user with read-only permissions. Never paste root keys.</span>
+                <span>
+                  Use a dedicated IAM user with read-only permissions. Never paste root keys.
+                </span>
               </div>
             </section>
 
@@ -296,16 +338,27 @@ function NewScan() {
                     <label
                       key={t}
                       className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors ${
-                        selected[t] ? "border-primary/60 bg-primary/5" : "border-border hover:border-border/80"
+                        selected[t]
+                          ? "border-primary/60 bg-primary/5"
+                          : "border-border hover:border-border/80"
                       }`}
                     >
-                      <Checkbox checked={selected[t]} onCheckedChange={() => toggle(t)} className="mt-0.5" />
+                      <Checkbox
+                        checked={selected[t]}
+                        onCheckedChange={() => toggle(t)}
+                        className="mt-0.5"
+                      />
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: a.colorVar }} />
+                          <span
+                            className="inline-block h-2 w-2 rounded-full"
+                            style={{ backgroundColor: a.colorVar }}
+                          />
                           <span className="text-sm font-medium text-foreground">{a.name}</span>
                         </div>
-                        <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">{a.tagline}</p>
+                        <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
+                          {a.tagline}
+                        </p>
                       </div>
                     </label>
                   );
@@ -333,14 +386,25 @@ function NewScan() {
                         selectedCustom[c.id] ? "border-primary/60 bg-primary/5" : "border-border"
                       }`}
                     >
-                      <Checkbox checked={!!selectedCustom[c.id]} onCheckedChange={() => toggleCustom(c.id)} className="mt-0.5" />
+                      <Checkbox
+                        checked={!!selectedCustom[c.id]}
+                        onCheckedChange={() => toggleCustom(c.id)}
+                        className="mt-0.5"
+                      />
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: c.color }} />
+                          <span
+                            className="inline-block h-2 w-2 rounded-full"
+                            style={{ backgroundColor: c.color }}
+                          />
                           <span className="text-sm font-medium truncate">{c.name}</span>
                         </div>
-                        <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{c.description}</p>
-                        <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">{c.services.join(", ")}</p>
+                        <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
+                          {c.description}
+                        </p>
+                        <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
+                          {c.services.join(", ")}
+                        </p>
                       </div>
                     </label>
                   ))}
@@ -350,7 +414,11 @@ function NewScan() {
 
             <section className="rounded-lg border border-border bg-card p-5">
               <label className="flex items-start gap-3 cursor-pointer">
-                <Checkbox checked={saveAsSchedule} onCheckedChange={(v) => setSaveAsSchedule(v === true)} className="mt-0.5" />
+                <Checkbox
+                  checked={saveAsSchedule}
+                  onCheckedChange={(v) => setSaveAsSchedule(v === true)}
+                  className="mt-0.5"
+                />
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-3.5 w-3.5 text-primary" />
@@ -358,7 +426,7 @@ function NewScan() {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span 
+                          <span
                             className="inline-flex cursor-help items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
                             onClick={(e) => e.preventDefault()}
                           >
@@ -366,19 +434,45 @@ function NewScan() {
                           </span>
                         </TooltipTrigger>
                         <TooltipContent className="max-w-xs p-3 space-y-2 bg-popover text-popover-foreground border border-border shadow-md">
-                          <p className="font-semibold text-xs text-foreground">How the Schedule reminders work</p>
+                          <p className="font-semibold text-xs text-foreground">
+                            How the Schedule reminders work
+                          </p>
                           <div className="text-[11px] space-y-1.5 leading-relaxed text-muted-foreground">
-                            <p><strong className="text-foreground">Setting the Cadence:</strong> When you create a scheduled scan, you set a cadence (e.g., every 7 days).</p>
-                            <p><strong className="text-foreground">The "Due Now" Alert:</strong> The database calculates the <code className="font-mono bg-muted px-1 rounded text-foreground">next_run_at</code> timestamp. When that time is reached or passed, the dashboard UI highlights the schedule with a "Due now" alert badge.</p>
-                            <p><strong className="text-foreground">Running the Scan:</strong> To run the due scan, you click "Run now", which prompts you to re-enter your read-only AWS credentials (or uses the keys cached in your browser tab's session memory).</p>
-                            <p><strong className="text-foreground">Updating the Baseline:</strong> Once the scan is run, the system automatically advances the <code className="font-mono bg-muted px-1 rounded text-foreground">next_run_at</code> timestamp by the cadence days (e.g., advances by 7 days).</p>
+                            <p>
+                              <strong className="text-foreground">Setting the Cadence:</strong> When
+                              you create a scheduled scan, you set a cadence (e.g., every 7 days).
+                            </p>
+                            <p>
+                              <strong className="text-foreground">The "Due Now" Alert:</strong> The
+                              database calculates the{" "}
+                              <code className="font-mono bg-muted px-1 rounded text-foreground">
+                                next_run_at
+                              </code>{" "}
+                              timestamp. When that time is reached or passed, the dashboard UI
+                              highlights the schedule with a "Due now" alert badge.
+                            </p>
+                            <p>
+                              <strong className="text-foreground">Running the Scan:</strong> To run
+                              the due scan, you click "Run now", which prompts you to re-enter your
+                              read-only AWS credentials (or uses the keys cached in your browser
+                              tab's session memory).
+                            </p>
+                            <p>
+                              <strong className="text-foreground">Updating the Baseline:</strong>{" "}
+                              Once the scan is run, the system automatically advances the{" "}
+                              <code className="font-mono bg-muted px-1 rounded text-foreground">
+                                next_run_at
+                              </code>{" "}
+                              timestamp by the cadence days (e.g., advances by 7 days).
+                            </p>
                           </div>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Cirrus will remind you when the next run is due and diff findings against this baseline.
+                    Cirrus will remind you when the next run is due and diff findings against this
+                    baseline.
                   </p>
                 </div>
               </label>
