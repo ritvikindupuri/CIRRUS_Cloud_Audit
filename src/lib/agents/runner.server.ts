@@ -1353,13 +1353,32 @@ Rules:
   }
 
   const { createGoogleGenerativeAI } = await import("@ai-sdk/google");
+  const { SAFETY_PREAMBLE, delimitUntrustedInput, detectPromptInjection } =
+    await import("@/lib/prompt-injection-defense");
   const google = createGoogleGenerativeAI({ apiKey });
   const model = google("gemini-3.5-flash");
+
+  // Enhance system prompt with safety preamble
+  const enhancedSystem = `${SAFETY_PREAMBLE}\n\n${system}`;
+
+  // Detect prompt injection in custom agent prompts
+  if (agentType === "custom" && customAgent) {
+    const injectionCheck = detectPromptInjection(customAgent.system_prompt);
+    if (injectionCheck.detected) {
+      console.warn(
+        `[SECURITY] Prompt injection detected in custom agent ${customAgent.id}: ${injectionCheck.reason}`,
+      );
+      await logStep(ctx, {
+        kind: "thought",
+        thought: `[SECURITY WARNING] Potential prompt injection detected: ${injectionCheck.reason}`,
+      });
+    }
+  }
 
   try {
     const { text } = await generateText({
       model,
-      system,
+      system: enhancedSystem,
       prompt: `Begin your scan now. AWS region: ${creds.region}.`,
       tools,
       stopWhen: stepCountIs(50),

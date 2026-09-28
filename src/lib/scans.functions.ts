@@ -3,6 +3,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { rateLimitAWS, rateLimitAI } from "@/integrations/supabase/rate-limit-middleware";
+import { logAuditEvent } from "@/lib/audit-logger";
+import { redactObject } from "@/lib/log-redaction";
 import type { AgentType } from "@/lib/agents/definitions";
 import { sendEmailViaResend } from "@/lib/email.server";
 
@@ -19,20 +22,33 @@ const StartScanInput = z.object({
 });
 
 export const runScan = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, rateLimitAWS])
   .inputValidator((input: unknown) => StartScanInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { scanId, creds } = data;
 
+    // Authorization: verify user owns the scan
     const { data: scan, error: scanErr } = await supabase
       .from("scans")
       .select("id, user_id, selected_agents, status, custom_agent_ids")
       .eq("id", scanId)
       .eq("user_id", userId)
       .single();
-    if (scanErr || !scan) throw new Error("Scan not found");
+    if (scanErr || !scan) {
+      console.error("[runScan] Unauthorized scan access attempt", { scanId, userId });
+      throw new Error("Scan not found or access denied");
+    }
     if (scan.status !== "pending") return { ok: true, alreadyRunning: true };
+
+    // Audit log
+    await logAuditEvent({
+      userId,
+      action: "scan_run",
+      resourceType: "scan",
+      resourceId: scanId,
+      metadata: { region: creds.region, agents: scan.selected_agents },
+    });
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
@@ -132,26 +148,45 @@ export interface Remediation {
 }
 
 export const generateRemediation = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, rateLimitAI])
   .inputValidator((input: unknown) => RemediationInput.parse(input))
   .handler(async ({ data, context }): Promise<Remediation> => {
     const { supabase, userId } = context;
 
+    // Authorization: verify user owns the finding
     const { data: finding } = await supabase
       .from("findings")
       .select("id, severity, title, description, resource, scan_id, remediation")
       .eq("id", data.findingId)
       .single();
-    if (!finding) throw new Error("Finding not found");
+    if (!finding) {
+      console.error("[generateRemediation] Finding not found", { findingId: data.findingId });
+      throw new Error("Finding not found");
+    }
 
     const { data: scan } = await supabase
       .from("scans")
       .select("user_id, region")
       .eq("id", finding.scan_id)
       .single();
-    if (!scan || scan.user_id !== userId) throw new Error("Not authorized");
+    if (!scan || scan.user_id !== userId) {
+      console.error("[generateRemediation] Unauthorized access", {
+        findingId: data.findingId,
+        userId,
+      });
+      throw new Error("Not authorized");
+    }
 
     if (finding.remediation) return finding.remediation as unknown as Remediation;
+
+    // Audit log
+    await logAuditEvent({
+      userId,
+      action: "remediation_generate",
+      resourceType: "finding",
+      resourceId: data.findingId,
+      metadata: { severity: finding.severity, title: finding.title },
+    });
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
@@ -199,6 +234,13 @@ Respond with ONLY valid JSON in this exact shape (no markdown, no backticks):
       .from("findings")
       .update({ remediation: parsed as unknown as never })
       .eq("id", finding.id);
+
+    // Redact sensitive data before logging
+    console.log(
+      "[generateRemediation] Generated playbook",
+      redactObject({ findingId: data.findingId, userId }),
+    );
+
     return parsed;
   });
 
