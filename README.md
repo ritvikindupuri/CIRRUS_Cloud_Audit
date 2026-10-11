@@ -32,7 +32,7 @@ Cirrus is a cloud security platform that deploys autonomous, context-aware AI ag
 ## System Architecture
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ritvikindupuri/CIRRUS_Cloud_Audit/main/cirrus_architecture.jpg?v=2" alt="Cirrus Zero-Trust Orchestration Architecture" width="100%" />
+  <img src="https://raw.githubusercontent.com/ritvikindupuri/CIRRUS_Cloud_Audit/main/cirrus_architecture.jpg?v=5aa1caca" alt="Cirrus Zero-Trust Orchestration Architecture" width="100%" />
 </p>
 <p align="center"><strong>Figure 1: Cirrus Zero-Trust Orchestration Architecture</strong></p>
 
