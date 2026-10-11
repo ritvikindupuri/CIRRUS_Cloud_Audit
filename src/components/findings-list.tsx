@@ -129,6 +129,20 @@ function FindingCard({ finding: f }: { finding: Finding }) {
       const r = await generateRemediation({ data: { findingId: f.id } });
       setRemediation(r as unknown as Record<string, unknown>);
       setOpen(true);
+
+      // Automatically perform the CloudFormation dry-run simulation in the background
+      // so the user immediately gets the verified snapshot, diff, and execution change set.
+      const creds = loadCreds();
+      if (creds && typeof (r as any)?.cloudformation === "string" && (r as any).cloudformation.trim().length > 0) {
+        setCfnBusy("dry");
+        runDryRunOnce(creds)
+          .catch((dryErr) => {
+            console.warn("[Auto Dry-Run Notice]", dryErr);
+          })
+          .finally(() => {
+            setCfnBusy(null);
+          });
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to generate playbook");
     } finally {
@@ -333,15 +347,23 @@ function FindingCard({ finding: f }: { finding: Finding }) {
                 </div>
               )}
 
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={dryRun} disabled={cfnBusy !== null}>
-                  {cfnBusy === "dry" ? (
-                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                  ) : (
-                    <ShieldCheck className="mr-1 h-3 w-3" />
-                  )}
-                  Dry-run change set
-                </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                {(!deployment || deployment.change_set_status !== "CREATE_COMPLETE") && (
+                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={dryRun} disabled={cfnBusy !== null}>
+                    {cfnBusy === "dry" ? (
+                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    ) : (
+                      <ShieldCheck className="mr-1 h-3 w-3" />
+                    )}
+                    {cfnBusy === "dry" ? "Simulating changes..." : "Re-run change set"}
+                  </Button>
+                )}
+                {deployment?.change_set_status === "CREATE_COMPLETE" && (
+                  <Badge variant="outline" className="h-7 px-2.5 font-mono text-xs border-emerald-500/40 text-emerald-400 bg-emerald-500/10 flex items-center gap-1.5">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Simulation Verified ({Array.isArray(deployment.change_set_changes) ? (deployment.change_set_changes as any[]).length : 0} changes)
+                  </Badge>
+                )}
                 <Button
                   size="sm"
                   className="h-7 text-xs"
