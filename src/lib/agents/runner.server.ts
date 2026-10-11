@@ -88,16 +88,16 @@ async function addFinding(
     evidence?: unknown;
   },
 ) {
-  const { error } = await ctx.supabase.from("findings").insert({
+  const payload: Record<string, unknown> = {
     scan_id: ctx.scanId,
     agent_run_id: ctx.agentRunId,
     severity: f.severity,
     title: f.title,
     description: f.description ?? null,
-    resource_id: f.resource ?? "AWS Resource",
-    resource_type: "aws_resource",
-    evidence: f.evidence ?? null,
-  });
+    resource: f.resource ?? "AWS Resource",
+    evidence: f.evidence ?? {},
+  };
+  const { error } = await ctx.supabase.from("findings").insert(payload as any);
   if (error) {
     console.error("[addFinding Error]", error);
   }
