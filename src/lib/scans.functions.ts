@@ -55,9 +55,17 @@ export const runScan = createServerFn({ method: "POST" })
     if (customIds.length > 0) {
       const { data: customs } = await supabase
         .from("custom_agents")
-        .select("id, name, description, system_prompt, services")
+        .select("*")
         .in("id", customIds);
-      for (const c of customs ?? []) customMap.set(c.id, c);
+      for (const c of (customs ?? []) as any[]) {
+        customMap.set(c.id, {
+          id: c.id,
+          name: c.name,
+          description: c.description ?? null,
+          system_prompt: c.system_prompt || c.prompt || "",
+          services: c.services ?? [],
+        });
+      }
     }
 
     const { runAgent } = await import("@/lib/agents/runner.server");
@@ -400,15 +408,15 @@ export const replayAgentNode = createServerFn({ method: "POST" })
     if (run.custom_agent_id) {
       const { data: custom } = await supabase
         .from("custom_agents")
-        .select("id, name, description, system_prompt, services")
+        .select("*")
         .eq("id", run.custom_agent_id)
-        .single();
+        .maybeSingle();
       if (custom) {
         customAgent = {
           id: custom.id,
           name: custom.name,
           description: custom.description,
-          system_prompt: custom.system_prompt,
+          system_prompt: (custom as any).system_prompt || (custom as any).prompt || "",
           services: custom.services,
         };
       }

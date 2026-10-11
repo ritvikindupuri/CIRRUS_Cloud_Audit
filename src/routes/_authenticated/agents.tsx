@@ -79,7 +79,11 @@ Rules:
       .from("custom_agents")
       .select("*")
       .order("created_at", { ascending: false });
-    setAgents((data ?? []) as CustomAgent[]);
+    const mapped = (data ?? []).map((a: any) => ({
+      ...a,
+      system_prompt: a.system_prompt || a.prompt || "",
+    }));
+    setAgents(mapped as CustomAgent[]);
   }
   useEffect(() => {
     void load();
@@ -108,7 +112,7 @@ Rules:
     const payload = {
       name: editing.name!.trim(),
       description: editing.description?.trim() ?? null,
-      system_prompt: editing.system_prompt!,
+      prompt: editing.system_prompt!,
       services: editing.services ?? [],
       color: editing.color ?? COLORS[0],
     };
@@ -133,6 +137,8 @@ Rules:
     if (error) return toast.error(error.message);
     void load();
   }
+
+
 
   return (
     <div className="min-h-screen">
@@ -163,19 +169,21 @@ Rules:
               alongside the built-in agents in any scan.
             </p>
           </div>
-          <Button
-            onClick={() =>
-              setEditing({
-                name: "",
-                description: "",
-                system_prompt: STARTER_PROMPT,
-                services: ["iam"],
-                color: COLORS[0],
-              })
-            }
-          >
-            <Plus className="mr-1.5 h-4 w-4" /> New agent
-          </Button>
+          <div>
+            <Button
+              onClick={() =>
+                setEditing({
+                  name: "",
+                  description: "",
+                  system_prompt: STARTER_PROMPT,
+                  services: ["iam"],
+                  color: COLORS[0],
+                })
+              }
+            >
+              <Plus className="mr-1.5 h-4 w-4" /> New agent
+            </Button>
+          </div>
         </div>
 
         {editing && (

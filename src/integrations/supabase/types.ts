@@ -122,7 +122,8 @@ export type Database = {
           id: string
           name: string
           services: string[]
-          system_prompt: string
+          system_prompt?: string | null
+          prompt?: string | null
           user_id: string
         }
         Insert: {
@@ -132,7 +133,8 @@ export type Database = {
           id?: string
           name: string
           services?: string[]
-          system_prompt: string
+          system_prompt?: string | null
+          prompt?: string | null
           user_id: string
         }
         Update: {
@@ -142,7 +144,8 @@ export type Database = {
           id?: string
           name?: string
           services?: string[]
-          system_prompt?: string
+          system_prompt?: string | null
+          prompt?: string | null
           user_id?: string
         }
         Relationships: []
