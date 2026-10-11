@@ -42,6 +42,7 @@ interface Deployment {
   finding_id: string;
   status: string;
   stack_name: string;
+  change_set_name?: string | null;
   change_set_status: string | null;
   change_set_changes: unknown;
   executed: boolean;
@@ -50,7 +51,7 @@ interface Deployment {
   created_at: string;
 }
 
-const SEV_CLASS: Record<Finding["severity"], string> = {
+const SEV_CLASS: Record<string, string> = {
   info: "border-severity-info/40 text-severity-info",
   low: "border-severity-low/40 text-severity-low",
   medium: "border-severity-medium/40 text-severity-medium",

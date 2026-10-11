@@ -18,6 +18,7 @@ import { DriftDiff } from "@/components/drift-diff";
 import { ExecutionTimeline } from "@/components/execution-timeline";
 import { CirrusLogo } from "@/components/cirrus-logo";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, RotateCw, Download, GitCompare, Clock, Loader2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { runScan, generateRemediation } from "@/lib/scans.functions";
