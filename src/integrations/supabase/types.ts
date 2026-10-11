@@ -159,6 +159,8 @@ export type Database = {
           id: string
           remediation: Json | null
           resource: string | null
+          resource_id: string | null
+          resource_type: string | null
           scan_id: string
           severity: string
           title: string
@@ -171,6 +173,8 @@ export type Database = {
           id?: string
           remediation?: Json | null
           resource?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
           scan_id: string
           severity: string
           title: string
@@ -183,6 +187,8 @@ export type Database = {
           id?: string
           remediation?: Json | null
           resource?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
           scan_id?: string
           severity?: string
           title?: string

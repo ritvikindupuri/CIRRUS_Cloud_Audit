@@ -136,12 +136,15 @@ export const generateRemediation = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<Remediation> => {
     const { supabase, userId } = context;
 
-    const { data: finding } = await supabase
+    const { data: finding, error: findingErr } = await supabase
       .from("findings")
-      .select("id, severity, title, description, resource, scan_id, remediation")
+      .select("id, severity, title, description, resource_id, scan_id, remediation")
       .eq("id", data.findingId)
       .single();
-    if (!finding) throw new Error("Finding not found");
+    if (findingErr || !finding) {
+      console.error("[generateRemediation error]", findingErr);
+      throw new Error("Finding not found");
+    }
 
     const { data: scan } = await supabase
       .from("scans")
@@ -164,7 +167,7 @@ export const generateRemediation = createServerFn({ method: "POST" })
 
 Severity: ${finding.severity}
 Title: ${finding.title}
-Resource: ${finding.resource ?? "n/a"}
+Resource: ${finding.resource_id ?? "n/a"}
 Region: ${scan.region}
 Description: ${finding.description ?? "n/a"}
 
