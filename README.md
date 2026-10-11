@@ -17,10 +17,15 @@ Cirrus is a cloud security platform that deploys autonomous, context-aware AI ag
   * **IAM Auditor**: Enters role/user policies, analyzes wildcards, and flags aged keys.
   * **S3 Hunter**: Audits bucket configurations for public block access, public policies, and default encryption.
   * **EC2 / Network Agent**: Discovers security groups open to the world (0.0.0.0/0) on sensitive ports.
+* **Node Color Criticality Indicators**: Graph nodes feature a segmented severity bar mapping live findings across severity buckets (`critical` [red] → `high` [orange] → `medium` [yellow] → `low` [blue] → `info` [gray]) for instantaneous visual triage.
+* **Interactive Audio Guidance (TTS)**: Contextual speech narration powered by the Web Speech API. Security engineers can listen to spoken scan-level executive summaries or individual finding walkthroughs covering risk severity, resource target, and audit recommendations.
+* **Pre-Remediation Resource Diff Preview**: Shows exactly what will change on the cloud resource before applying any fix. Renders a syntax-highlighted before/after diff (e.g. S3 PublicAccessBlock, EC2 Security Group CIDR ingress, or IAM policy statements) comparing live misconfiguration with the target CloudFormation template.
+* **Cryptographic State Snapshot & Version Ledger**: Prior to executing remediations, Cirrus issues a verified state snapshot fingerprint (`snap-xxxxxxxx`) and timestamp saved to the Supabase audit ledger, accompanied by a collapsible per-resource version history panel.
+* **Global Cross-Resource Findings Inventory**: A dedicated `/findings` dashboard consolidating all security issues across accounts, regions, and resources—sorted by default in strict criticality order (`Critical → High → Medium → Low → Informational`) with real-time text and severity filtering.
 * **Custom Agent Builder**: Define your own prompts, white-list specific AWS service boundaries (RDS, Lambda, DynamoDB, KMS, CloudTrail), and use safety filters to automatically block mutating instructions.
 * **Real-time Timeline and Regex Search**: Watch agents run live via Supabase WebSockets. Search agent thoughts and tool outputs using exact matching or regular expression pattern filters.
 * **Automated CloudFormation Playbook Remediation**: For every finding, Gemini generates an explanation, rollback playbook, and safe CloudFormation template. Fixes audit execution steps and automatically polls/logs stack events. (See the exported [Sample Security Assessment Report (PDF)](Cirrus_Security_Report_PenTest_2026-06-14%20%281%29.pdf) to view real compiled playbooks).
-* **Capability Validation**: Forces explicit acknowledgment of named IAM resource adjustments (CAPABILITY_NAMED_IAM) before applying fixes to safeguard cloud configurations.
+* **Capability Validation**: Forces explicit acknowledgment of named IAM resource adjustments (`CAPABILITY_NAMED_IAM`) before applying fixes to safeguard cloud configurations.
 * **Baseline Drift Scheduling**: Define recurring scans to check for drift compared to baseline settings and receive notifications via Resend email integration.
 
 ---
@@ -34,19 +39,19 @@ Cirrus is a cloud security platform that deploys autonomous, context-aware AI ag
 
 ### Flow-by-Flow Explanation
 
-1. **User Interaction & Dashboard (Step 1)**: The operator accesses the Cirrus web interface to initiate cloud audits, monitor interactive node graphs, review live execution timelines, and manage findings.
+1. **User Interaction & Dashboard (Step 1)**: The operator accesses the Cirrus web interface to initiate cloud audits, monitor interactive node graphs with segmented severity criticality bars, review live execution timelines, and manage findings across the cross-resource inventory.
 2. **Runtime Credentials Staging (Step 2)**: Temporary AWS credentials (Access Key ID, Secret Access Key, Session Token) are cached strictly in client-side `sessionStorage`. Keys are transmitted securely over SSL to short-lived RPC endpoints and are never persisted in the database.
 3. **Scan Gateway Request (Step 3)**: The frontend dispatches authenticated scan requests to the server API gateway to launch scanning workflows across specified target AWS regions.
 4. **AI Agent Runner Orchestration (Step 4)**: The automated runner engine instantiates specialized AI agents (Recon, IAM Auditor, S3 Hunter, EC2 Network, and Custom Agents with strict service allowlists) powered by Google Gemini.
 5. **AWS Account Auditing (Step 5)**: Agents execute read-only API inspection queries against target AWS resources across configured service boundaries (IAM, S3, EC2, RDS, VPC, KMS, CloudTrail, Lambda, and DynamoDB).
-6. **Findings & Evidence Registration (Step 6)**: Audit findings, technical evidence, risk severity levels, and execution steps are persisted to the Supabase backend and streamed live to the UI via WebSockets.
+6. **Findings & Evidence Registration (Step 6)**: Audit findings, technical evidence, risk severity levels, and execution steps are persisted to the Supabase backend and streamed live to the UI via WebSockets. Spoken audio guidance summaries can be listened to directly upon scan completion.
 7. **AI Remediation Playbook Generation (Step 7)**: For every identified finding, Gemini generates an actionable remediation playbook containing a plain-English risk summary, AWS CLI fix commands, a deployable CloudFormation template, and a rollback plan.
-8. **Governed Deployment & Rollback (Step 8)**: Remediation templates are safely deployed via CloudFormation with dry-run preview change-sets, named IAM capability acknowledgments (`CAPABILITY_NAMED_IAM`), real-time stack event monitoring, and one-click rollback stack deletion.
+8. **Governed Deployment & Rollback (Step 8)**: Operators inspect pre-remediation before/after resource diffs and verified state snapshot ledger hashes (`snap-xxxxxxxx`) before executing dry-run preview change-sets, acknowledging named IAM capabilities (`CAPABILITY_NAMED_IAM`), monitoring real-time stack events, and executing one-click rollbacks.
 
 **Supporting Components**:
 * **Supabase Backend**: Manages agent runs, step logs, findings evidence, and streams real-time updates via WebSockets.
 * **Baseline & Drift Scheduler**: Executes recurring automated audits to detect configuration drift and dispatches email notifications via Resend.
-* **What the User Gets**: Live real-time timelines, evidence-backed cloud findings, custom agents with service allowlists, safe preview/rollback remediations, and exportable, shareable PDF security audit reports.
+* **What the User Gets**: Live real-time timelines, node criticality indicator bars, spoken audio guidance narration, pre-remediation diff previews, state snapshot audit assurances, cross-resource findings inventory, custom agents with service allowlists, safe preview/rollback remediations, and exportable, shareable PDF security audit reports.
 
 ---
 

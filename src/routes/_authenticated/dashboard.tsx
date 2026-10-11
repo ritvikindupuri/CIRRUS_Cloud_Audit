@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CirrusLogo } from "@/components/cirrus-logo";
-import { Plus, LogOut, Clock, Check, AlertCircle, Loader2, Beaker, Calendar } from "lucide-react";
+import { Plus, LogOut, Clock, Check, AlertCircle, Loader2, Beaker, Calendar, ShieldAlert } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { checkAndSendDriftReminders } from "@/lib/scans.functions";
 
@@ -91,6 +91,11 @@ function Dashboard() {
             <CirrusLogo />
           </Link>
           <div className="flex items-center gap-2">
+            <Link to="/findings">
+              <Button size="sm" variant="ghost">
+                <ShieldAlert className="mr-1.5 h-3.5 w-3.5 text-primary" /> All findings
+              </Button>
+            </Link>
             <Link to="/agents">
               <Button size="sm" variant="ghost">
                 <Beaker className="mr-1.5 h-3.5 w-3.5" /> Custom agents

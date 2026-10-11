@@ -19,12 +19,13 @@ import { ExecutionTimeline } from "@/components/execution-timeline";
 import { CirrusLogo } from "@/components/cirrus-logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, RotateCw, Download, GitCompare, Clock, Loader2 } from "lucide-react";
+import { ArrowLeft, RotateCw, Download, GitCompare, Clock, Loader2, Volume2, VolumeX } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { runScan, generateRemediation } from "@/lib/scans.functions";
 import { loadCreds } from "@/lib/aws-creds";
 import { toast } from "sonner";
 import { generateSecurityReport } from "@/lib/report-generator";
+import { speakScanSummary, stopAudioGuidance, subscribeAudioGuidance } from "@/lib/utils";
 
 interface ScanRow {
   id: string;
@@ -83,6 +84,13 @@ function ScanDetail() {
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [tab, setTab] = useState<"trace" | "timeline" | "findings" | "drift">("trace");
   const [downloading, setDownloading] = useState(false);
+  const [audioActive, setAudioActive] = useState(false);
+
+  useEffect(() => {
+    return subscribeAudioGuidance((state) => {
+      setAudioActive(state.speaking && state.activeId === `scan-${scanId}`);
+    });
+  }, [scanId]);
 
   useEffect(() => {
     let active = true;
@@ -142,6 +150,7 @@ function ScanDetail() {
     return runs.map((r) => {
       const custom = r.custom_agent_id ? customAgents[r.custom_agent_id] : undefined;
       const def = getAgentDefinition(r.agent_type, custom);
+      const runFindings = findings.filter((f) => f.agent_run_id === r.id);
       return {
         id: r.id,
         type: "agent",
@@ -149,7 +158,14 @@ function ScanDetail() {
         data: {
           agent: def,
           status: r.status,
-          findingsCount: findings.filter((f) => f.agent_run_id === r.id).length,
+          findingsCount: runFindings.length,
+          severityCounts: {
+            critical: runFindings.filter((f) => f.severity === "critical").length,
+            high: runFindings.filter((f) => f.severity === "high").length,
+            medium: runFindings.filter((f) => f.severity === "medium").length,
+            low: runFindings.filter((f) => f.severity === "low").length,
+            info: runFindings.filter((f) => f.severity === "info").length,
+          },
           selected: selectedRunId === r.id,
           onSelect: () => setSelectedRunId(r.id),
         },
@@ -271,14 +287,38 @@ function ScanDetail() {
             })}
             <Badge variant="outline" className="font-mono text-[10px] uppercase">{scan?.status}</Badge>
             {scan?.status === "complete" && (
-              <Button size="sm" variant="outline" onClick={handleDownloadReport} disabled={downloading}>
-                {downloading ? (
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Download className="mr-1.5 h-3.5 w-3.5" />
-                )}
-                {downloading ? "Generating Report..." : "Download Report"}
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  variant={audioActive ? "default" : "outline"}
+                  onClick={() => {
+                    speakScanSummary({
+                      id: scanId,
+                      name: scan?.name ?? "Cloud Scan",
+                      totalFindings: findings.length,
+                      criticalCount: severityCounts["critical"] ?? 0,
+                      highCount: severityCounts["high"] ?? 0,
+                      mediumCount: severityCounts["medium"] ?? 0,
+                    });
+                  }}
+                  title={audioActive ? "Stop Audio Guidance" : "Listen to Audio Briefing"}
+                >
+                  {audioActive ? (
+                    <VolumeX className="mr-1.5 h-3.5 w-3.5 animate-pulse text-amber-300" />
+                  ) : (
+                    <Volume2 className="mr-1.5 h-3.5 w-3.5 text-primary" />
+                  )}
+                  {audioActive ? "Stop Briefing" : "Audio Briefing"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleDownloadReport} disabled={downloading}>
+                  {downloading ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Download className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  {downloading ? "Generating Report..." : "Download Report"}
+                </Button>
+              </>
             )}
             {scan?.status === "error" && (
               <Button size="sm" variant="outline" onClick={retry}>
