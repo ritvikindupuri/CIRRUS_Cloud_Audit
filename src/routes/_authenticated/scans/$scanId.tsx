@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import {
   ReactFlow,
@@ -19,9 +19,9 @@ import { ExecutionTimeline } from "@/components/execution-timeline";
 import { CirrusLogo } from "@/components/cirrus-logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, RotateCw, Download, GitCompare, Clock, Loader2 } from "lucide-react";
+import { ArrowLeft, RotateCw, Download, GitCompare, Clock, Loader2, Trash2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { runScan, generateRemediation } from "@/lib/scans.functions";
+import { runScan, generateRemediation, deleteScan } from "@/lib/scans.functions";
 import { loadCreds } from "@/lib/aws-creds";
 import { toast } from "sonner";
 import { generateSecurityReport } from "@/lib/report-generator";
@@ -86,6 +86,8 @@ function ScanDetail() {
   const [downloading, setDownloading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let active = true;
@@ -254,6 +256,22 @@ function ScanDetail() {
     }
   }
 
+  async function handleDelete() {
+    if (!scan) return;
+    if (!confirm(`Are you sure you want to delete scan "${scan.name}"? This cannot be undone.`)) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await deleteScan({ data: { scanId } });
+      toast.success("Scan deleted successfully");
+      navigate({ to: "/dashboard" });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete scan");
+      setDeleting(false);
+    }
+  }
+
   if (loading && !scan) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-background">
@@ -338,6 +356,21 @@ function ScanDetail() {
                 <RotateCw className="mr-1.5 h-3.5 w-3.5" /> Retry
               </Button>
             )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              onClick={handleDelete}
+              disabled={deleting}
+              title="Delete scan"
+            >
+              {deleting ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Delete
+            </Button>
             <Link to="/dashboard">
               <Button size="sm" variant="ghost">
                 <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Scans

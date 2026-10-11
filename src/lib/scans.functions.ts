@@ -433,4 +433,53 @@ export const replayAgentNode = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const deleteScan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: { scanId: string }) => data)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { scanId } = data;
+
+    // Verify ownership
+    const { data: scan, error: sErr } = await supabase
+      .from("scans")
+      .select("id, user_id")
+      .eq("id", scanId)
+      .maybeSingle();
+
+    if (sErr || !scan || scan.user_id !== userId) {
+      throw new Error("Scan not found or not authorized");
+    }
+
+    // 1. Delete agent_steps
+    const { data: runs } = await supabase
+      .from("agent_runs")
+      .select("id")
+      .eq("scan_id", scanId);
+    const runIds = (runs ?? []).map((r) => r.id);
+    if (runIds.length > 0) {
+      await supabase.from("agent_steps").delete().in("agent_run_id", runIds);
+    }
+
+    // 2. Delete remediation deployments & findings
+    const { data: findings } = await supabase
+      .from("findings")
+      .select("id")
+      .eq("scan_id", scanId);
+    const findingIds = (findings ?? []).map((f) => f.id);
+    if (findingIds.length > 0) {
+      await supabase.from("remediation_deployments").delete().in("finding_id", findingIds);
+      await supabase.from("findings").delete().eq("scan_id", scanId);
+    }
+
+    // 3. Delete agent_runs
+    await supabase.from("agent_runs").delete().eq("scan_id", scanId);
+
+    // 4. Delete scan
+    const { error: delErr } = await supabase.from("scans").delete().eq("id", scanId);
+    if (delErr) throw delErr;
+
+    return { ok: true };
+  });
+
 
