@@ -12,10 +12,7 @@ import {
   ShieldAlert,
   Loader2,
   RefreshCw,
-  Volume2,
-  VolumeX,
 } from 'lucide-react';
-import { speakScanSummary, subscribeAudioGuidance } from '@/lib/utils';
 
 interface FindingRow {
   id: string;
@@ -53,14 +50,7 @@ function AllFindingsPage() {
   const [scans, setScans] = useState<Record<string, ScanMeta>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [severityFilter, setSeverityFilter] = useState<string>('all');
-  const [audioSpeaking, setAudioSpeaking] = useState(false);
-
-  useEffect(() => {
-    return subscribeAudioGuidance((state) => {
-      setAudioSpeaking(state.speaking && state.activeId === 'scan-global-findings');
-    });
-  }, []);
+  const [severityFilter, setSeverityFilter] = useState<string>("all");
 
   async function loadData() {
     setLoading(true);
@@ -134,28 +124,6 @@ function AllFindingsPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant={audioSpeaking ? "default" : "outline"}
-              onClick={() => {
-                speakScanSummary({
-                  id: "global-findings",
-                  name: "Global Inventory across All Cloud Resources",
-                  totalFindings: findings.length,
-                  criticalCount: counts["critical"] ?? 0,
-                  highCount: counts["high"] ?? 0,
-                  mediumCount: counts["medium"] ?? 0,
-                });
-              }}
-              title={audioSpeaking ? "Stop Audio Guidance" : "Listen to Global Findings Audio Briefing"}
-            >
-              {audioSpeaking ? (
-                <VolumeX className="mr-1.5 h-3.5 w-3.5 animate-pulse text-amber-300" />
-              ) : (
-                <Volume2 className="mr-1.5 h-3.5 w-3.5 text-primary" />
-              )}
-              {audioSpeaking ? "Stop Briefing" : "Audio Briefing"}
-            </Button>
             <Link to="/dashboard">
               <Button size="sm" variant="ghost">
                 <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Dashboard

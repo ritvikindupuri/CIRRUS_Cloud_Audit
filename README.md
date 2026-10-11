@@ -18,7 +18,6 @@ Cirrus is a cloud security platform that deploys autonomous, context-aware AI ag
   * **S3 Hunter**: Audits bucket configurations for public block access, public policies, and default encryption.
   * **EC2 / Network Agent**: Discovers security groups open to the world (0.0.0.0/0) on sensitive ports.
 * **Node Color Criticality Indicators**: Graph nodes feature a segmented severity bar mapping live findings across severity buckets (`critical` [red] → `high` [orange] → `medium` [yellow] → `low` [blue] → `info` [gray]) for instantaneous visual triage.
-* **Interactive Audio Guidance (TTS)**: Contextual speech narration powered by the Web Speech API. Security engineers can listen to spoken scan-level executive summaries or individual finding walkthroughs covering risk severity, resource target, and audit recommendations.
 * **Pre-Remediation Resource Diff Preview**: Shows exactly what will change on the cloud resource before applying any fix. Renders a syntax-highlighted before/after diff (e.g. S3 PublicAccessBlock, EC2 Security Group CIDR ingress, or IAM policy statements) comparing live misconfiguration with the target CloudFormation template.
 * **Cryptographic State Snapshot & Version Ledger**: Prior to executing remediations, Cirrus issues a verified state snapshot fingerprint (`snap-xxxxxxxx`) and timestamp saved to the Supabase audit ledger, accompanied by a collapsible per-resource version history panel.
 * **Global Cross-Resource Findings Inventory**: A dedicated `/findings` dashboard consolidating all security issues across accounts, regions, and resources—sorted by default in strict criticality order (`Critical → High → Medium → Low → Informational`) with real-time text and severity filtering.
@@ -44,14 +43,14 @@ Cirrus is a cloud security platform that deploys autonomous, context-aware AI ag
 3. **Scan Gateway Request (Step 3)**: The frontend dispatches authenticated scan requests to the server API gateway to launch scanning workflows across specified target AWS regions.
 4. **AI Agent Runner Orchestration (Step 4)**: The automated runner engine instantiates specialized AI agents (Recon, IAM Auditor, S3 Hunter, EC2 Network, and Custom Agents with strict service allowlists) powered by Google Gemini.
 5. **AWS Account Auditing (Step 5)**: Agents execute read-only API inspection queries against target AWS resources across configured service boundaries (IAM, S3, EC2, RDS, VPC, KMS, CloudTrail, Lambda, and DynamoDB).
-6. **Findings & Evidence Registration (Step 6)**: Audit findings, technical evidence, risk severity levels, and execution steps are persisted to the Supabase backend and streamed live to the UI via WebSockets. Spoken audio guidance summaries can be listened to directly upon scan completion.
+6. **Findings & Evidence Registration (Step 6)**: Audit findings, technical evidence, risk severity levels, and execution steps are persisted to the Supabase backend and streamed live to the UI via WebSockets.
 7. **AI Remediation Playbook Generation (Step 7)**: For every identified finding, Gemini generates an actionable remediation playbook containing a plain-English risk summary, AWS CLI fix commands, a deployable CloudFormation template, and a rollback plan.
 8. **Governed Deployment & Rollback (Step 8)**: Operators inspect pre-remediation before/after resource diffs and verified state snapshot ledger hashes (`snap-xxxxxxxx`) before executing dry-run preview change-sets, acknowledging named IAM capabilities (`CAPABILITY_NAMED_IAM`), monitoring real-time stack events, and executing one-click rollbacks.
 
 **Supporting Components**:
 * **Supabase Backend**: Manages agent runs, step logs, findings evidence, and streams real-time updates via WebSockets.
 * **Baseline & Drift Scheduler**: Executes recurring automated audits to detect configuration drift and dispatches email notifications via Resend.
-* **What the User Gets**: Live real-time timelines, node criticality indicator bars, spoken audio guidance narration, pre-remediation diff previews, state snapshot audit assurances, cross-resource findings inventory, custom agents with service allowlists, safe preview/rollback remediations, and exportable, shareable PDF security audit reports.
+* **What the User Gets**: Live real-time timelines, node criticality indicator bars, pre-remediation diff previews, state snapshot audit assurances, cross-resource findings inventory, custom agents with service allowlists, safe preview/rollback remediations, and exportable, shareable PDF security audit reports.
 
 ---
 

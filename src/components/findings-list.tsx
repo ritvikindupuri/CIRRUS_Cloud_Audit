@@ -11,8 +11,6 @@ import {
   ShieldCheck,
   AlertTriangle,
   Clock,
-  Volume2,
-  VolumeX,
   FileCheck2,
   Layers,
   History,
@@ -28,7 +26,6 @@ import {
 import { loadCreds } from "@/lib/aws-creds";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { speakFinding, stopAudioGuidance, subscribeAudioGuidance } from "@/lib/utils";
 import { ResourceRemediationDiff } from "@/components/drift-diff";
 
 interface Finding {
@@ -92,13 +89,6 @@ function FindingCard({ finding: f }: { finding: Finding }) {
   const [iamAcknowledged, setIamAcknowledged] = useState(false);
   const [showAuditLogs, setShowAuditLogs] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
-  const [isAudioSpeaking, setIsAudioSpeaking] = useState(false);
-
-  useEffect(() => {
-    return subscribeAudioGuidance((state) => {
-      setIsAudioSpeaking(state.speaking && state.activeId === f.id);
-    });
-  }, [f.id]);
 
   useEffect(() => {
     void supabase
@@ -280,30 +270,6 @@ function FindingCard({ finding: f }: { finding: Finding }) {
             )}
             {remediation ? (open ? "Hide playbook" : "Show playbook") : "Generate fix playbook"}
             {remediation && <ChevronDown className={`ml-1 h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} />}
-          </Button>
-
-          <Button
-            size="sm"
-            variant={isAudioSpeaking ? "default" : "ghost"}
-            className="h-7 text-xs px-2.5"
-            onClick={() => {
-              speakFinding({
-                id: f.id,
-                title: f.title,
-                severity: f.severity,
-                resource: f.resource,
-                description: f.description,
-                explanation: remediation?.explanation ? String(remediation.explanation) : null,
-              });
-            }}
-            title={isAudioSpeaking ? "Stop Finding Narration" : "Listen to Audio Guidance"}
-          >
-            {isAudioSpeaking ? (
-              <VolumeX className="mr-1.5 h-3.5 w-3.5 animate-pulse text-amber-300" />
-            ) : (
-              <Volume2 className="mr-1.5 h-3.5 w-3.5 text-primary" />
-            )}
-            {isAudioSpeaking ? "Stop Audio" : "Audio Guidance"}
           </Button>
         </div>
       </div>
