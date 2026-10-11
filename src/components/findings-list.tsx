@@ -159,9 +159,15 @@ function FindingCard({ finding: f }: { finding: Finding }) {
     try {
       await runDryRunOnce(creds);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      const isPermsIssue =
-        /AccessDenied|not authorized to perform|cloudformation:/i.test(msg);
+      let msg = "An error occurred during change set dry-run";
+      if (e instanceof Error) {
+        msg = e.message;
+      } else if (typeof e === "string") {
+        msg = e;
+      } else if (typeof e === "object" && e !== null) {
+        msg = (e as any).message || (e as any).reason || JSON.stringify(e);
+      }
+      const isPermsIssue = /AccessDenied|not authorized to perform|cloudformation:/i.test(msg);
       if (isPermsIssue) {
         toast.message("Trying to self-grant CloudFormation permissions…");
         try {
@@ -174,13 +180,15 @@ function FindingCard({ finding: f }: { finding: Finding }) {
               await runDryRunOnce(creds);
               return;
             } catch (e2) {
-              toast.error(e2 instanceof Error ? e2.message : "Retry failed");
+              const msg2 = e2 instanceof Error ? e2.message : String(e2);
+              toast.error(msg2);
               return;
             }
           }
-          toast.error(b.reason);
+          toast.error(typeof b.reason === "string" ? b.reason : "Permission bootstrap failed");
         } catch (be) {
-          toast.error(be instanceof Error ? be.message : "Bootstrap failed");
+          const beMsg = be instanceof Error ? be.message : String(be);
+          toast.error(beMsg);
         }
       } else {
         toast.error(msg);
