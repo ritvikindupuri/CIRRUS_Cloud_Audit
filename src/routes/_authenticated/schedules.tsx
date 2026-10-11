@@ -31,6 +31,7 @@ interface Schedule {
 }
 
 export const Route = createFileRoute("/_authenticated/schedules")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Schedules · Cirrus" }] }),
   component: SchedulesPage,
 });
@@ -58,12 +59,12 @@ function SchedulesPage() {
     if (!userData.user) return;
     const { data: profile } = await supabase
       .from("profiles")
-      .select("resend_api_key, resend_from_email")
+      .select("*")
       .eq("id", userData.user.id)
-      .single();
+      .maybeSingle();
     if (profile) {
-      setResendApiKey(profile.resend_api_key ?? "");
-      setResendFromEmail(profile.resend_from_email ?? "");
+      setResendApiKey((profile as any).resend_api_key ?? "");
+      setResendFromEmail((profile as any).resend_from_email ?? "");
     }
   }
 

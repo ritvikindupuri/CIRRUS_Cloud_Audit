@@ -66,8 +66,10 @@ export function FindingsList({ findings }: { findings: Finding[] }) {
       </div>
     );
   }
-  const sortOrder = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
-  const sorted = [...findings].sort((a, b) => sortOrder[a.severity] - sortOrder[b.severity]);
+  const sortOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+  const sorted = [...findings].sort(
+    (a, b) => (sortOrder[a.severity?.toLowerCase()] ?? 99) - (sortOrder[b.severity?.toLowerCase()] ?? 99),
+  );
   return (
     <div className="space-y-2">
       {sorted.map((f) => (
@@ -240,7 +242,7 @@ function FindingCard({ finding: f }: { finding: Finding }) {
     <div className="rounded-md border border-border bg-surface">
       <div className="p-3">
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className={`font-mono text-[10px] uppercase ${SEV_CLASS[f.severity]}`}>
+          <Badge variant="outline" className={`font-mono text-[10px] uppercase ${SEV_CLASS[(f.severity || "info").toLowerCase()] || SEV_CLASS.info}`}>
             {f.severity}
           </Badge>
           <span className="text-sm font-medium text-foreground truncate flex-1">{f.title}</span>
@@ -255,8 +257,8 @@ function FindingCard({ finding: f }: { finding: Finding }) {
             </Badge>
           )}
         </div>
-        {f.resource && (
-          <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">{f.resource}</div>
+        {(f.resource || (f as any).resource_id) && (
+          <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">{f.resource || (f as any).resource_id}</div>
         )}
         {f.description && (
           <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">{f.description}</p>

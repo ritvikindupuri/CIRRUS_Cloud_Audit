@@ -35,6 +35,7 @@ interface CustomAgent {
 }
 
 export const Route = createFileRoute("/_authenticated/scans/new")({
+  ssr: false,
   head: () => ({ meta: [{ title: "New scan · Cirrus" }] }),
   component: NewScan,
 });
@@ -171,7 +172,9 @@ function NewScan() {
 
       navigate({ to: "/scans/$scanId", params: { scanId: scan.id } });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to launch scan");
+      console.error("[LaunchScan Error]", err);
+      const msg = (err as any)?.message || (err as any)?.error_description || (err as any)?.error || String(err);
+      toast.error(`Failed to launch scan: ${msg}`);
       setLaunching(false);
     }
   }

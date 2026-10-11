@@ -27,6 +27,7 @@ interface Scan {
 }
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Scans · Cirrus" }] }),
   component: Dashboard,
 });

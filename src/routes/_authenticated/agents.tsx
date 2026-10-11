@@ -23,6 +23,7 @@ interface CustomAgent {
 }
 
 export const Route = createFileRoute("/_authenticated/agents")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Custom agents · Cirrus" }] }),
   component: AgentsPage,
 });

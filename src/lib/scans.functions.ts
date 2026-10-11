@@ -267,12 +267,14 @@ export const checkAndSendDriftReminders = createServerFn({ method: "POST" })
     // Get the user's email address and Resend configuration from profiles
     const { data: profile, error: profileErr } = await supabase
       .from("profiles")
-      .select("email, display_name, resend_api_key, resend_from_email")
+      .select("*")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
 
     if (profileErr || !profile?.email) {
-      console.error("[Cirrus Reminders] Profile email not found for user:", userId, profileErr);
+      if (profileErr) {
+        console.error("[Cirrus Reminders] Profile fetch error for user:", userId, profileErr);
+      }
       return { ok: false, error: "User profile or email not found" };
     }
 
@@ -337,8 +339,8 @@ export const checkAndSendDriftReminders = createServerFn({ method: "POST" })
           subject,
           html: htmlContent,
         },
-        profile.resend_api_key,
-        profile.resend_from_email
+        (profile as any)?.resend_api_key,
+        (profile as any)?.resend_from_email
       );
 
       if (mailRes.ok) {

@@ -26,7 +26,7 @@ const ICONS = {
   network: Network,
 };
 
-const STATUS_LABEL = {
+const STATUS_LABEL: Record<string, string> = {
   pending: "Waiting",
   running: "Executing",
   complete: "Done",
@@ -34,8 +34,15 @@ const STATUS_LABEL = {
 };
 
 export function AgentNode({ data }: NodeProps) {
-  const d = data as AgentNodeData;
-  const Icon = ICONS[d.agent.icon];
+  const d = (data || {}) as AgentNodeData;
+  const agent = d.agent || {
+    type: "recon",
+    name: "Agent",
+    tagline: "",
+    colorVar: "var(--color-agent-recon)",
+    icon: "radar",
+  };
+  const Icon = ICONS[agent.icon] ?? Radar;
   const StatusIcon =
     d.status === "complete"
       ? Check
@@ -70,15 +77,15 @@ export function AgentNode({ data }: NodeProps) {
       <div className="flex items-start gap-3 p-3">
         <div
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md"
-          style={{ backgroundColor: d.agent.colorVar, color: "oklch(0.15 0.012 260)" }}
+          style={{ backgroundColor: agent.colorVar, color: "oklch(0.15 0.012 260)" }}
         >
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-1">
-            <span className="truncate text-sm font-semibold text-foreground">{d.agent.name}</span>
+            <span className="truncate text-sm font-semibold text-foreground">{agent.name}</span>
           </div>
-          <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{d.agent.tagline}</div>
+          <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{agent.tagline}</div>
         </div>
       </div>
 

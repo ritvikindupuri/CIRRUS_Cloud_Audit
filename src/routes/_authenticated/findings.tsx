@@ -33,6 +33,7 @@ interface ScanMeta {
 }
 
 export const Route = createFileRoute('/_authenticated/findings')({
+  ssr: false,
   head: () => ({ meta: [{ title: 'All Findings · Cirrus' }] }),
   component: AllFindingsPage,
 });
@@ -83,20 +84,24 @@ function AllFindingsPage() {
   const filteredFindings = useMemo(() => {
     return findings
       .filter((f) => {
-        if (severityFilter !== 'all' && f.severity !== severityFilter) {
+        const s = (f.severity || 'info').toLowerCase();
+        if (severityFilter !== 'all' && s !== severityFilter.toLowerCase()) {
           return false;
         }
         if (search.trim()) {
           const q = search.toLowerCase();
-          const matchTitle = f.title.toLowerCase().includes(q);
-          const matchResource = (f.resource ?? '').toLowerCase().includes(q);
+          const matchTitle = (f.title ?? '').toLowerCase().includes(q);
+          const res = f.resource || (f as any).resource_id || '';
+          const matchResource = res.toLowerCase().includes(q);
           const matchDesc = (f.description ?? '').toLowerCase().includes(q);
           return matchTitle || matchResource || matchDesc;
         }
         return true;
       })
       .sort((a, b) => {
-        const diff = (SEVERITY_RANK[a.severity] ?? 99) - (SEVERITY_RANK[b.severity] ?? 99);
+        const diff =
+          (SEVERITY_RANK[a.severity?.toLowerCase()] ?? 99) -
+          (SEVERITY_RANK[b.severity?.toLowerCase()] ?? 99);
         if (diff !== 0) return diff;
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
@@ -104,7 +109,8 @@ function AllFindingsPage() {
 
   const counts = useMemo(() => {
     return findings.reduce<Record<string, number>>((acc, f) => {
-      acc[f.severity] = (acc[f.severity] ?? 0) + 1;
+      const s = (f.severity || 'info').toLowerCase();
+      acc[s] = (acc[s] ?? 0) + 1;
       return acc;
     }, {});
   }, [findings]);

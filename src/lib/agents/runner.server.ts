@@ -88,15 +88,19 @@ async function addFinding(
     evidence?: unknown;
   },
 ) {
-  await ctx.supabase.from("findings").insert({
+  const { error } = await ctx.supabase.from("findings").insert({
     scan_id: ctx.scanId,
     agent_run_id: ctx.agentRunId,
     severity: f.severity,
     title: f.title,
     description: f.description ?? null,
-    resource: f.resource ?? null,
+    resource_id: f.resource ?? "AWS Resource",
+    resource_type: "aws_resource",
     evidence: f.evidence ?? null,
   });
+  if (error) {
+    console.error("[addFinding Error]", error);
+  }
 }
 
 function awsConfig(creds: AwsCredsInput, region?: string) {
