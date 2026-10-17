@@ -199,16 +199,26 @@ export function AwsSetupGuide() {
               </button>
             </div>
             <p>
-              Name the policy <code className="font-mono text-foreground">CirrusAuditPolicy</code>
-              , save it, then attach it to the{" "}
+              Name the policy <code className="font-mono text-foreground">CirrusAuditPolicy</code>,
+              save it, then attach it to the{" "}
               <code className="font-mono text-foreground">cirrus-audit</code> user.
             </p>
             <div className="rounded border border-amber-200 dark:border-amber-800/30 bg-amber-50/50 dark:bg-amber-950/20 p-3 text-xs text-amber-800 dark:text-amber-200 space-y-2">
               <p>
-                <strong className="text-amber-900 dark:text-amber-100 font-semibold">Remediation permissions included:</strong> This inline policy includes both read-only audit permissions and CloudFormation one-click remediation actions.
+                <strong className="text-amber-900 dark:text-amber-100 font-semibold">
+                  Remediation permissions included:
+                </strong>{" "}
+                This inline policy includes both read-only audit permissions and CloudFormation
+                one-click remediation actions.
               </p>
               <p className="text-[11px] leading-relaxed opacity-95">
-                Note that one-click remediation capabilities can only execute if the operator credentials themselves have power-user privileges (e.g., <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 rounded text-amber-900 dark:text-amber-100">iam:PutUserPolicy</code>). A pure read-only key cannot execute stack mutations or modifications without administrative access.
+                Note that one-click remediation capabilities can only execute if the operator
+                credentials themselves have power-user privileges (e.g.,{" "}
+                <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 rounded text-amber-900 dark:text-amber-100">
+                  iam:PutUserPolicy
+                </code>
+                ). A pure read-only key cannot execute stack mutations or modifications without
+                administrative access.
               </p>
             </div>
           </AccordionContent>

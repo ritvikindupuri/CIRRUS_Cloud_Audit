@@ -4,7 +4,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CirrusLogo } from "@/components/cirrus-logo";
-import { Plus, LogOut, Clock, Check, AlertCircle, Loader2, Beaker, Calendar, ShieldAlert, Trash2 } from "lucide-react";
+import {
+  Plus,
+  LogOut,
+  Clock,
+  Check,
+  AlertCircle,
+  Loader2,
+  Beaker,
+  Calendar,
+  ShieldAlert,
+  Trash2,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { checkAndSendDriftReminders, deleteScan } from "@/lib/scans.functions";
 import { toast } from "sonner";
@@ -72,7 +83,11 @@ function Dashboard() {
     const channel = supabase
       .channel("scans:list")
       .on("postgres_changes", { event: "*", schema: "public", table: "scans" }, () => void load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "scheduled_scans" }, () => void load())
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "scheduled_scans" },
+        () => void load(),
+      )
       .subscribe();
     return () => {
       active = false;
@@ -89,7 +104,11 @@ function Dashboard() {
 
   async function handleDeleteScan(e: React.MouseEvent, scanId: string, scanName: string) {
     e.stopPropagation();
-    if (!confirm(`Are you sure you want to delete scan "${scanName}"? This will permanently remove its findings, traces, and timeline.`)) {
+    if (
+      !confirm(
+        `Are you sure you want to delete scan "${scanName}"? This will permanently remove its findings, traces, and timeline.`,
+      )
+    ) {
       return;
     }
     setDeletingId(scanId);

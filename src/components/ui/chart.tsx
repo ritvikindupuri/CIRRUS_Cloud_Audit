@@ -68,17 +68,25 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null;
   }
 
+  // Sanitize id to prevent CSS injection - only allow alphanumeric, dash, underscore
+  const sanitizedId = id.replace(/[^a-zA-Z0-9_-]/g, "");
+
   return (
     <style
       dangerouslySetInnerHTML={{
         __html: Object.entries(THEMES)
           .map(
             ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
+${prefix} [data-chart=${sanitizedId}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
+    // Sanitize key to prevent CSS injection
+    const sanitizedKey = key.replace(/[^a-zA-Z0-9_-]/g, "");
     const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
+    // Validate color is a safe CSS value (hex, rgb, hsl, or named color)
+    const isSafeColor =
+      color && /^(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-z]+)$/.test(color);
+    return isSafeColor ? `  --color-${sanitizedKey}: ${color};` : null;
   })
   .join("\n")}
 }

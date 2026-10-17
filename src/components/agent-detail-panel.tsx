@@ -186,9 +186,13 @@ export function AgentDetailPanel({ run }: { run: Run | null }) {
             }
             if (m.kind === "final") {
               return (
-                <div key={m.id} className="rounded-md border border-primary/40 bg-primary/5 p-4 shadow-sm">
+                <div
+                  key={m.id}
+                  className="rounded-md border border-primary/40 bg-primary/5 p-4 shadow-sm"
+                >
                   <div className="mb-2 flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider font-semibold text-primary border-b border-primary/20 pb-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" /> Final Assessment & Summary
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" /> Final
+                    Assessment & Summary
                   </div>
                   {m.error ? (
                     <p className="text-xs text-destructive font-mono">{m.error}</p>
@@ -232,8 +236,8 @@ export function AgentDetailPanel({ run }: { run: Run | null }) {
                         </div>
                         <pre className="terminal max-h-72 overflow-auto text-[11.5px]">
                           {typeof m.result === "string"
-                              ? m.result
-                              : JSON.stringify(m.result, null, 2)}
+                            ? m.result
+                            : JSON.stringify(m.result, null, 2)}
                         </pre>
                       </div>
                     )}

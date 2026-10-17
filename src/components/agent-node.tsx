@@ -151,10 +151,7 @@ export function AgentNode({ data }: NodeProps) {
               )}
             </>
           ) : (
-            <div
-              title="No findings detected"
-              className="h-full w-full bg-emerald-500/20"
-            />
+            <div title="No findings detected" className="h-full w-full bg-emerald-500/20" />
           )}
         </div>
       </div>

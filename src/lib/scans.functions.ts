@@ -3,6 +3,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { rateLimitAWS, rateLimitAI } from "@/integrations/supabase/rate-limit-middleware";
+import { logAuditEvent } from "@/lib/audit-logger";
+import { redactObject } from "@/lib/log-redaction";
 import type { AgentType } from "@/lib/agents/definitions";
 import { sendEmailViaResend } from "@/lib/email.server";
 
@@ -19,20 +22,33 @@ const StartScanInput = z.object({
 });
 
 export const runScan = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, rateLimitAWS])
   .inputValidator((input: unknown) => StartScanInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { scanId, creds } = data;
 
+    // Authorization: verify user owns the scan
     const { data: scan, error: scanErr } = await supabase
       .from("scans")
       .select("id, user_id, selected_agents, status, custom_agent_ids")
       .eq("id", scanId)
       .eq("user_id", userId)
       .single();
-    if (scanErr || !scan) throw new Error("Scan not found");
+    if (scanErr || !scan) {
+      console.error("[runScan] Unauthorized scan access attempt", { scanId, userId });
+      throw new Error("Scan not found or access denied");
+    }
     if (scan.status !== "pending") return { ok: true, alreadyRunning: true };
+
+    // Audit log
+    await logAuditEvent({
+      userId,
+      action: "scan_run",
+      resourceType: "scan",
+      resourceId: scanId,
+      metadata: { region: creds.region, agents: scan.selected_agents },
+    });
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
@@ -51,13 +67,22 @@ export const runScan = createServerFn({ method: "POST" })
 
     // Load any custom agent configs referenced by this scan's runs.
     const customIds = runs.map((r) => r.custom_agent_id).filter((x): x is string => !!x);
-    const customMap = new Map<string, { id: string; name: string; description: string | null; system_prompt: string; services: string[] }>();
+    const customMap = new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        description: string | null;
+        system_prompt: string;
+        services: string[];
+      }
+    >();
     if (customIds.length > 0) {
       const { data: customs } = await supabase
         .from("custom_agents")
         .select("*")
         .in("id", customIds);
-      for (const c of (customs ?? []) as any[]) {
+      for (const c of customs ?? []) {
         customMap.set(c.id, {
           id: c.id,
           name: c.name,
@@ -80,7 +105,7 @@ export const runScan = createServerFn({ method: "POST" })
             agentType: r.agent_type as AgentType,
             creds,
             apiKey,
-            customAgent: r.custom_agent_id ? customMap.get(r.custom_agent_id) ?? null : null,
+            customAgent: r.custom_agent_id ? (customMap.get(r.custom_agent_id) ?? null) : null,
           }),
         ),
       );
@@ -131,18 +156,22 @@ export interface Remediation {
 }
 
 export const generateRemediation = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, rateLimitAI])
   .inputValidator((input: unknown) => RemediationInput.parse(input))
   .handler(async ({ data, context }): Promise<Remediation> => {
     const { supabase, userId } = context;
 
+    // Authorization: verify user owns the finding
     const { data: finding, error: findingErr } = await supabase
       .from("findings")
       .select("id, severity, title, description, resource_id, scan_id, remediation")
       .eq("id", data.findingId)
       .single();
     if (findingErr || !finding) {
-      console.error("[generateRemediation error]", findingErr);
+      console.error("[generateRemediation] Finding not found", {
+        findingId: data.findingId,
+        error: findingErr,
+      });
       throw new Error("Finding not found");
     }
 
@@ -151,9 +180,24 @@ export const generateRemediation = createServerFn({ method: "POST" })
       .select("user_id, region")
       .eq("id", finding.scan_id)
       .single();
-    if (!scan || scan.user_id !== userId) throw new Error("Not authorized");
+    if (!scan || scan.user_id !== userId) {
+      console.error("[generateRemediation] Unauthorized access", {
+        findingId: data.findingId,
+        userId,
+      });
+      throw new Error("Not authorized");
+    }
 
     if (finding.remediation) return finding.remediation as unknown as Remediation;
+
+    // Audit log
+    await logAuditEvent({
+      userId,
+      action: "remediation_generate",
+      resourceType: "finding",
+      resourceId: data.findingId,
+      metadata: { severity: finding.severity, title: finding.title },
+    });
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
@@ -182,7 +226,10 @@ Respond with ONLY valid JSON in this exact shape (no markdown, no backticks):
     const { text } = await generateText({ model, prompt });
     let parsed: Remediation;
     try {
-      const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
+      const cleaned = text
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/```\s*$/, "")
+        .trim();
       const obj = JSON.parse(cleaned);
       parsed = {
         explanation: String(obj.explanation ?? ""),
@@ -198,6 +245,13 @@ Respond with ONLY valid JSON in this exact shape (no markdown, no backticks):
       .from("findings")
       .update({ remediation: parsed as unknown as never })
       .eq("id", finding.id);
+
+    // Redact sensitive data before logging
+    console.log(
+      "[generateRemediation] Generated playbook",
+      redactObject({ findingId: data.findingId, userId }),
+    );
+
     return parsed;
   });
 
@@ -240,8 +294,13 @@ export const runScheduledScan = createServerFn({ method: "POST" })
     if (scanErr || !scan) throw scanErr ?? new Error("Failed to create scan");
 
     const positions = [
-      { x: 0, y: 0 }, { x: 320, y: -120 }, { x: 320, y: 120 }, { x: 640, y: 0 },
-      { x: 640, y: -200 }, { x: 640, y: 200 }, { x: 960, y: 0 },
+      { x: 0, y: 0 },
+      { x: 320, y: -120 },
+      { x: 320, y: 120 },
+      { x: 640, y: 0 },
+      { x: 640, y: -200 },
+      { x: 640, y: 200 },
+      { x: 960, y: 0 },
     ];
     const builtinRuns = (sched.selected_agents as string[]).map((agent_type, i) => ({
       scan_id: scan.id,
@@ -350,8 +409,8 @@ export const checkAndSendDriftReminders = createServerFn({ method: "POST" })
           subject,
           html: htmlContent,
         },
-        (profile as any)?.resend_api_key,
-        (profile as any)?.resend_from_email
+        profile.resend_api_key,
+        profile.resend_from_email,
       );
 
       if (mailRes.ok) {
@@ -362,7 +421,10 @@ export const checkAndSendDriftReminders = createServerFn({ method: "POST" })
           .update({ last_reminded_at: now })
           .eq("id", schedule.id);
       } else {
-        console.error(`[Cirrus Reminders] Failed to send email for schedule ${schedule.id}:`, mailRes.error);
+        console.error(
+          `[Cirrus Reminders] Failed to send email for schedule ${schedule.id}:`,
+          mailRes.error,
+        );
       }
     }
 
@@ -403,7 +465,13 @@ export const replayAgentNode = createServerFn({ method: "POST" })
     // Reset status to pending
     await supabase
       .from("agent_runs")
-      .update({ status: "pending", summary: null, started_at: null, completed_at: null, blocked_calls: [] })
+      .update({
+        status: "pending",
+        summary: null,
+        started_at: null,
+        completed_at: null,
+        blocked_calls: [],
+      })
       .eq("id", agentRunId);
 
     // 3. Load custom agent config if applicable
@@ -419,7 +487,7 @@ export const replayAgentNode = createServerFn({ method: "POST" })
           id: custom.id,
           name: custom.name,
           description: custom.description,
-          system_prompt: (custom as any).system_prompt || (custom as any).prompt || "",
+          system_prompt: custom.system_prompt || custom.prompt || "",
           services: custom.services,
         };
       }
@@ -446,7 +514,7 @@ export const replayAgentNode = createServerFn({ method: "POST" })
 
 export const deleteScan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { scanId: string }) => data)
+  .inputValidator((input: unknown) => z.object({ scanId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { scanId } = data;
@@ -463,20 +531,14 @@ export const deleteScan = createServerFn({ method: "POST" })
     }
 
     // 1. Delete agent_steps
-    const { data: runs } = await supabase
-      .from("agent_runs")
-      .select("id")
-      .eq("scan_id", scanId);
+    const { data: runs } = await supabase.from("agent_runs").select("id").eq("scan_id", scanId);
     const runIds = (runs ?? []).map((r) => r.id);
     if (runIds.length > 0) {
       await supabase.from("agent_steps").delete().in("agent_run_id", runIds);
     }
 
     // 2. Delete remediation deployments & findings
-    const { data: findings } = await supabase
-      .from("findings")
-      .select("id")
-      .eq("scan_id", scanId);
+    const { data: findings } = await supabase.from("findings").select("id").eq("scan_id", scanId);
     const findingIds = (findings ?? []).map((f) => f.id);
     if (findingIds.length > 0) {
       await supabase.from("remediation_deployments").delete().in("finding_id", findingIds);
@@ -492,5 +554,3 @@ export const deleteScan = createServerFn({ method: "POST" })
 
     return { ok: true };
   });
-
-

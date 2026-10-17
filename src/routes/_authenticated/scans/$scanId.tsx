@@ -94,11 +94,12 @@ function ScanDetail() {
 
     async function load() {
       try {
-        const [{ data: s, error: sErr }, { data: r, error: rErr }, { data: f, error: fErr }] = await Promise.all([
-          supabase.from("scans").select("*").eq("id", scanId).maybeSingle(),
-          supabase.from("agent_runs").select("*").eq("scan_id", scanId).order("created_at"),
-          supabase.from("findings").select("*").eq("scan_id", scanId).order("created_at"),
-        ]);
+        const [{ data: s, error: sErr }, { data: r, error: rErr }, { data: f, error: fErr }] =
+          await Promise.all([
+            supabase.from("scans").select("*").eq("id", scanId).maybeSingle(),
+            supabase.from("agent_runs").select("*").eq("scan_id", scanId).order("created_at"),
+            supabase.from("findings").select("*").eq("scan_id", scanId).order("created_at"),
+          ]);
         if (sErr) throw sErr;
         if (rErr) throw rErr;
         if (fErr) throw fErr;
@@ -108,9 +109,7 @@ function ScanDetail() {
         setFindings((f ?? []) as FindingRow[]);
         setSelectedRunId((prev) => prev ?? (r && r.length > 0 ? r[0].id : null));
 
-        const customIds = (r ?? [])
-          .map((x) => x.custom_agent_id)
-          .filter((x): x is string => !!x);
+        const customIds = (r ?? []).map((x) => x.custom_agent_id).filter((x): x is string => !!x);
         if (customIds.length > 0) {
           const { data: customs } = await supabase
             .from("custom_agents")
@@ -137,14 +136,32 @@ function ScanDetail() {
 
     const channel = supabase
       .channel(`scan:${scanId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "scans", filter: `id=eq.${scanId}` }, () => void load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "agent_runs", filter: `scan_id=eq.${scanId}` }, () => void load())
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "findings", filter: `scan_id=eq.${scanId}` }, (p) => {
-        setFindings((prev) => [...prev, p.new as FindingRow]);
-      })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "findings", filter: `scan_id=eq.${scanId}` }, (p) => {
-        setFindings((prev) => prev.map((f) => (f.id === (p.new as FindingRow).id ? (p.new as FindingRow) : f)));
-      })
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "scans", filter: `id=eq.${scanId}` },
+        () => void load(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "agent_runs", filter: `scan_id=eq.${scanId}` },
+        () => void load(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "findings", filter: `scan_id=eq.${scanId}` },
+        (p) => {
+          setFindings((prev) => [...prev, p.new as FindingRow]);
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "findings", filter: `scan_id=eq.${scanId}` },
+        (p) => {
+          setFindings((prev) =>
+            prev.map((f) => (f.id === (p.new as FindingRow).id ? (p.new as FindingRow) : f)),
+          );
+        },
+      )
       .subscribe();
 
     return () => {
@@ -198,7 +215,9 @@ function ScanDetail() {
   const selectedRunWithCustom = selectedRun
     ? {
         ...selectedRun,
-        custom_agent: selectedRun.custom_agent_id ? customAgents[selectedRun.custom_agent_id] ?? null : null,
+        custom_agent: selectedRun.custom_agent_id
+          ? (customAgents[selectedRun.custom_agent_id] ?? null)
+          : null,
       }
     : null;
 
@@ -223,7 +242,9 @@ function ScanDetail() {
       let updatedFindings = [...findings];
 
       if (missingRemediations.length > 0) {
-        toast.info(`Generating ${missingRemediations.length} remediation playbook(s) for the report...`);
+        toast.info(
+          `Generating ${missingRemediations.length} remediation playbook(s) for the report...`,
+        );
         const results = await Promise.all(
           missingRemediations.map(async (f) => {
             try {
@@ -233,7 +254,7 @@ function ScanDetail() {
               console.error(`Failed to generate remediation for finding ${f.id}:`, err);
               return { id: f.id, remediation: null };
             }
-          })
+          }),
         );
 
         updatedFindings = findings.map((f) => {
@@ -288,9 +309,7 @@ function ScanDetail() {
       <div className="flex h-screen flex-col items-center justify-center bg-background px-4">
         <div className="max-w-md text-center">
           <h1 className="text-xl font-semibold tracking-tight text-foreground">Scan Not Found</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {loadError}
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">{loadError}</p>
           <div className="mt-6 flex justify-center gap-2">
             <Link to="/dashboard">
               <Button size="sm" variant="outline">
@@ -321,7 +340,8 @@ function ScanDetail() {
             <div>
               <div className="text-sm font-medium text-foreground">{scan?.name ?? "…"}</div>
               <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                {scan?.aws_account_alias || scan?.aws_account_id || "account pending"} · {scan?.region}
+                {scan?.aws_account_alias || scan?.aws_account_id || "account pending"} ·{" "}
+                {scan?.region}
               </div>
             </div>
           </div>
@@ -335,14 +355,25 @@ function ScanDetail() {
                 info: "text-severity-info",
               };
               return severityCounts[s] ? (
-                <Badge key={s} variant="outline" className={`font-mono text-[10px] uppercase ${cls[s]}`}>
+                <Badge
+                  key={s}
+                  variant="outline"
+                  className={`font-mono text-[10px] uppercase ${cls[s]}`}
+                >
                   {severityCounts[s]} {s}
                 </Badge>
               ) : null;
             })}
-            <Badge variant="outline" className="font-mono text-[10px] uppercase">{scan?.status}</Badge>
+            <Badge variant="outline" className="font-mono text-[10px] uppercase">
+              {scan?.status}
+            </Badge>
             {scan?.status === "complete" && (
-              <Button size="sm" variant="outline" onClick={handleDownloadReport} disabled={downloading}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleDownloadReport}
+                disabled={downloading}
+              >
                 {downloading ? (
                   <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                 ) : (
@@ -406,21 +437,37 @@ function ScanDetail() {
         </div>
 
         <aside className="flex w-[480px] flex-col border-l border-border bg-background">
-          <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="flex h-full flex-col">
+          <Tabs
+            value={tab}
+            onValueChange={(v) => setTab(v as typeof tab)}
+            className="flex h-full flex-col"
+          >
             <div className="border-b border-border px-3 pt-2">
               <TabsList className="bg-transparent p-0 gap-1">
-                <TabsTrigger value="trace" className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border">
+                <TabsTrigger
+                  value="trace"
+                  className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border"
+                >
                   Agent trace
                 </TabsTrigger>
-                <TabsTrigger value="timeline" className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border">
+                <TabsTrigger
+                  value="timeline"
+                  className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border"
+                >
                   <Clock className="mr-1 h-3 w-3" />
                   Timeline
                 </TabsTrigger>
-                <TabsTrigger value="findings" className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border">
+                <TabsTrigger
+                  value="findings"
+                  className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border"
+                >
                   Findings · {findings.length}
                 </TabsTrigger>
                 {parentFindings && (
-                  <TabsTrigger value="drift" className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border">
+                  <TabsTrigger
+                    value="drift"
+                    className="rounded-md data-[state=active]:bg-surface data-[state=active]:border data-[state=active]:border-border"
+                  >
                     <GitCompare className="mr-1 h-3 w-3" />
                     Drift
                   </TabsTrigger>
@@ -437,7 +484,9 @@ function ScanDetail() {
                   id: r.id,
                   agent_type: r.agent_type,
                   custom_agent_id: r.custom_agent_id,
-                  custom_agent: r.custom_agent_id ? customAgents[r.custom_agent_id] ?? null : null,
+                  custom_agent: r.custom_agent_id
+                    ? (customAgents[r.custom_agent_id] ?? null)
+                    : null,
                 }))}
               />
             </TabsContent>

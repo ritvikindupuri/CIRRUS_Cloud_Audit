@@ -24,32 +24,37 @@ export function generateSecurityReport(scan: ScanData, findings: FindingData[]) 
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
-    format: "a4"
+    format: "a4",
   });
 
   // Color Palette
   const colors = {
-    primary: [26, 54, 93],       // Deep Slate Navy
-    secondary: [49, 151, 149],   // Muted Teal
-    darkText: [45, 55, 72],      // Charcoal
+    primary: [26, 54, 93], // Deep Slate Navy
+    secondary: [49, 151, 149], // Muted Teal
+    darkText: [45, 55, 72], // Charcoal
     lightBackground: [247, 250, 252], // Off-white/slate
-    border: [226, 232, 240],     // Light grey
-    
+    border: [226, 232, 240], // Light grey
+
     // Severity colors
-    critical: [229, 62, 62],     // Red
-    high: [221, 107, 32],        // Orange
-    medium: [214, 158, 46],      // Gold
-    low: [49, 130, 206],         // Blue
-    info: [113, 128, 150]        // Slate Grey
+    critical: [229, 62, 62], // Red
+    high: [221, 107, 32], // Orange
+    medium: [214, 158, 46], // Gold
+    low: [49, 130, 206], // Blue
+    info: [113, 128, 150], // Slate Grey
   };
 
   const getSeverityColor = (severity: string) => {
     switch (severity.toLowerCase()) {
-      case "critical": return colors.critical;
-      case "high": return colors.high;
-      case "medium": return colors.medium;
-      case "low": return colors.low;
-      default: return colors.info;
+      case "critical":
+        return colors.critical;
+      case "high":
+        return colors.high;
+      case "medium":
+        return colors.medium;
+      case "low":
+        return colors.low;
+      default:
+        return colors.info;
     }
   };
 
@@ -57,13 +62,30 @@ export function generateSecurityReport(scan: ScanData, findings: FindingData[]) 
     const title = f.title.toLowerCase();
     const resource = (f.resource ?? "").toLowerCase();
     if (title.includes("s3") || resource.includes("arn:aws:s3")) return "S3";
-    if (title.includes("iam") || title.includes("user") || title.includes("role") || title.includes("policy") || resource.includes("arn:aws:iam")) return "IAM";
-    if (title.includes("security group") || title.includes("ec2") || title.includes("port") || title.includes("ingress") || resource.includes("sg-") || resource.includes("i-")) return "EC2";
-    if (title.includes("rds") || title.includes("database") || resource.includes("arn:aws:rds")) return "RDS";
+    if (
+      title.includes("iam") ||
+      title.includes("user") ||
+      title.includes("role") ||
+      title.includes("policy") ||
+      resource.includes("arn:aws:iam")
+    )
+      return "IAM";
+    if (
+      title.includes("security group") ||
+      title.includes("ec2") ||
+      title.includes("port") ||
+      title.includes("ingress") ||
+      resource.includes("sg-") ||
+      resource.includes("i-")
+    )
+      return "EC2";
+    if (title.includes("rds") || title.includes("database") || resource.includes("arn:aws:rds"))
+      return "RDS";
     if (title.includes("lambda") || resource.includes("arn:aws:lambda")) return "Lambda";
     if (title.includes("dynamodb") || resource.includes("arn:aws:dynamodb")) return "DynamoDB";
     if (title.includes("kms") || resource.includes("arn:aws:kms")) return "KMS";
-    if (title.includes("cloudtrail") || resource.includes("arn:aws:cloudtrail")) return "CloudTrail";
+    if (title.includes("cloudtrail") || resource.includes("arn:aws:cloudtrail"))
+      return "CloudTrail";
     return "AWS General";
   };
 
@@ -85,27 +107,31 @@ export function generateSecurityReport(scan: ScanData, findings: FindingData[]) 
   // Helper for drawing styled block quotes/banners
   const drawBanner = (text: string, subText: string, sevColor: number[]) => {
     checkPageBreak(32);
-    
+
     // Draw left border strip
     doc.setFillColor(sevColor[0], sevColor[1], sevColor[2]);
     doc.rect(leftMargin, currentY, 3, 22, "F");
-    
+
     // Draw shaded background
-    doc.setFillColor(colors.lightBackground[0], colors.lightBackground[1], colors.lightBackground[2]);
+    doc.setFillColor(
+      colors.lightBackground[0],
+      colors.lightBackground[1],
+      colors.lightBackground[2],
+    );
     doc.rect(leftMargin + 3, currentY, rightMargin - leftMargin - 3, 22, "F");
-    
+
     // Draw text
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
     doc.setTextColor(colors.darkText[0], colors.darkText[1], colors.darkText[2]);
     doc.text(text, leftMargin + 8, currentY + 7);
-    
+
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     doc.setTextColor(113, 128, 150);
     const splitSub = doc.splitTextToSize(subText, rightMargin - leftMargin - 15);
     doc.text(splitSub, leftMargin + 8, currentY + 13);
-    
+
     currentY += 27;
   };
 
@@ -128,7 +154,7 @@ export function generateSecurityReport(scan: ScanData, findings: FindingData[]) 
     while (lineIndex < splitCode.length) {
       // Calculate remaining printable height on current page
       const remainingHeight = pageHeight - currentY - 15; // 15mm bottom margin
-      if (remainingHeight < (lineHeight + padding * 2)) {
+      if (remainingHeight < lineHeight + padding * 2) {
         doc.addPage();
         currentY = 20;
       }
@@ -144,7 +170,7 @@ export function generateSecurityReport(scan: ScanData, findings: FindingData[]) 
       }
 
       const chunk = splitCode.slice(lineIndex, lineIndex + linesToPrint);
-      const chunkHeight = (chunk.length * lineHeight) + padding * 2;
+      const chunkHeight = chunk.length * lineHeight + padding * 2;
 
       // Background box for this chunk
       doc.setFillColor(40, 44, 52); // Dark editor theme
@@ -227,9 +253,9 @@ export function generateSecurityReport(scan: ScanData, findings: FindingData[]) 
   doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
   doc.text("ASSESSMENT TARGET AND SCOPE", leftMargin + 8, 150);
 
-  const targetAccount = scan.aws_account_alias 
-    ? `${scan.aws_account_alias} (${scan.aws_account_id})` 
-    : (scan.aws_account_id || "Unknown Account ID");
+  const targetAccount = scan.aws_account_alias
+    ? `${scan.aws_account_alias} (${scan.aws_account_id})`
+    : scan.aws_account_id || "Unknown Account ID";
 
   const metadata = [
     ["Scan Session ID", scan.id],
@@ -237,7 +263,7 @@ export function generateSecurityReport(scan: ScanData, findings: FindingData[]) 
     ["Target Account", targetAccount],
     ["Audited AWS Region", scan.region],
     ["Execution Date", new Date(scan.created_at).toLocaleString()],
-    ["Assessor Agent", "Cirrus Autonomous AI Engine v1.2"]
+    ["Assessor Agent", "Cirrus Autonomous AI Engine v1.2"],
   ];
 
   doc.setFont("helvetica", "normal");
@@ -272,11 +298,11 @@ export function generateSecurityReport(scan: ScanData, findings: FindingData[]) 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.setTextColor(colors.darkText[0], colors.darkText[1], colors.darkText[2]);
-  
+
   const introText = `This document provides the technical audit details resulting from the automated cloud security assessment executed by Cirrus within the AWS environment. The objective of this automated assessment was to evaluate configuration baselines, detect vulnerabilities (such as open security groups or unencrypted storage), analyze IAM policy boundaries, and compile a secure remediation roadmap.`;
   const splitIntro = doc.splitTextToSize(introText, rightMargin - leftMargin);
   doc.text(splitIntro, leftMargin, currentY);
-  currentY += (splitIntro.length * 5) + 8;
+  currentY += splitIntro.length * 5 + 8;
 
   // Overview callout box
   const severityCounts = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
@@ -306,7 +332,7 @@ export function generateSecurityReport(scan: ScanData, findings: FindingData[]) 
 • EC2 Auditor: Inspects security groups, inbound firewall policies, and network-exposed configurations.`;
   const splitMethodology = doc.splitTextToSize(methodologyText, rightMargin - leftMargin);
   doc.text(splitMethodology, leftMargin, currentY);
-  currentY += (splitMethodology.length * 5) + 12;
+  currentY += splitMethodology.length * 5 + 12;
 
   // 3. PAGE 3: VULNERABILITY SUMMARY MATRIX
   checkPageBreak(90);
@@ -333,15 +359,18 @@ export function generateSecurityReport(scan: ScanData, findings: FindingData[]) 
     willDrawCell: (data) => {
       if (data.section === "body" && data.column.index === 0) {
         const rowVal = data.cell.raw as string;
-        if (rowVal.startsWith("Critical")) doc.setTextColor(colors.critical[0], colors.critical[1], colors.critical[2]);
-        else if (rowVal.startsWith("High")) doc.setTextColor(colors.high[0], colors.high[1], colors.high[2]);
-        else if (rowVal.startsWith("Medium")) doc.setTextColor(colors.medium[0], colors.medium[1], colors.medium[2]);
+        if (rowVal.startsWith("Critical"))
+          doc.setTextColor(colors.critical[0], colors.critical[1], colors.critical[2]);
+        else if (rowVal.startsWith("High"))
+          doc.setTextColor(colors.high[0], colors.high[1], colors.high[2]);
+        else if (rowVal.startsWith("Medium"))
+          doc.setTextColor(colors.medium[0], colors.medium[1], colors.medium[2]);
         doc.setFont("helvetica", "bold");
       }
     },
     didDrawPage: (data) => {
       currentY = data.cursor ? data.cursor.y + 15 : currentY;
-    }
+    },
   });
 
   // 4. DETAILED VULNERABILITY LOGS
@@ -358,12 +387,16 @@ export function generateSecurityReport(scan: ScanData, findings: FindingData[]) 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
     doc.setTextColor(colors.info[0], colors.info[1], colors.info[2]);
-    doc.text("No security findings were registered during this scan execution.", leftMargin, currentY);
+    doc.text(
+      "No security findings were registered during this scan execution.",
+      leftMargin,
+      currentY,
+    );
   }
 
   const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
   const sortedFindings = [...findings].sort(
-    (a, b) => severityOrder[a.severity] - severityOrder[b.severity]
+    (a, b) => severityOrder[a.severity] - severityOrder[b.severity],
   );
 
   sortedFindings.forEach((f, idx) => {
@@ -375,7 +408,7 @@ export function generateSecurityReport(scan: ScanData, findings: FindingData[]) 
     drawBanner(
       `[${idx + 1}] ${f.title}`,
       `Risk Severity: ${f.severity.toUpperCase()}   |   Audited Service: ${service}`,
-      sevColor
+      sevColor,
     );
 
     // Affected Resource
@@ -386,10 +419,10 @@ export function generateSecurityReport(scan: ScanData, findings: FindingData[]) 
       doc.setTextColor(74, 85, 104);
       doc.text("Target Affected Resource:", leftMargin, currentY);
       doc.setFont("helvetica", "normal");
-      
+
       const splitResource = doc.splitTextToSize(f.resource, rightMargin - leftMargin - 45);
       doc.text(splitResource, leftMargin + 42, currentY);
-      currentY += (splitResource.length * 5) + 3;
+      currentY += splitResource.length * 5 + 3;
     }
 
     // Threat Description
@@ -398,7 +431,11 @@ export function generateSecurityReport(scan: ScanData, findings: FindingData[]) 
     }
 
     // Remediation Playbook
-    const remediation = f.remediation as { explanation?: string; cli?: string; cloudformation?: string } | null;
+    const remediation = f.remediation as {
+      explanation?: string;
+      cli?: string;
+      cloudformation?: string;
+    } | null;
     if (remediation) {
       if (remediation.explanation) {
         drawParagraph("Remediation Strategy:", remediation.explanation);
@@ -436,7 +473,7 @@ export function generateSecurityReport(scan: ScanData, findings: FindingData[]) 
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
-    
+
     // Header (skip on cover page)
     if (i > 1) {
       doc.setFont("helvetica", "normal");
@@ -445,7 +482,7 @@ export function generateSecurityReport(scan: ScanData, findings: FindingData[]) 
       doc.text(`Cirrus Security Report · Target: ${scan.name}`, leftMargin, 12);
       doc.line(leftMargin, 14, rightMargin, 14);
     }
-    
+
     // Footer
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);

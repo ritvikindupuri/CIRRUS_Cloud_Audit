@@ -27,13 +27,16 @@ export function StructuredAgentOutput({
   function flushList() {
     if (currentList.length > 0) {
       blocks.push(
-        <ul key={`list-${blocks.length}`} className="my-2.5 space-y-1.5 pl-5 list-disc text-xs text-foreground/90">
+        <ul
+          key={`list-${blocks.length}`}
+          className="my-2.5 space-y-1.5 pl-5 list-disc text-xs text-foreground/90"
+        >
           {currentList.map((item, idx) => (
             <li key={idx} className="leading-relaxed">
               {renderFormattedInline(item, highlight, isRegex)}
             </li>
           ))}
-        </ul>
+        </ul>,
       );
       currentList = [];
     }
@@ -58,7 +61,7 @@ export function StructuredAgentOutput({
         >
           <span className="text-[10px] text-muted-foreground">■</span>
           {renderFormattedInline(headingText, highlight, isRegex)}
-        </h4>
+        </h4>,
       );
       continue;
     }
@@ -74,7 +77,7 @@ export function StructuredAgentOutput({
         >
           <span className="text-primary font-bold">›</span>
           {renderFormattedInline(cleanHeader, highlight, isRegex)}
-        </h5>
+        </h5>,
       );
       continue;
     }
@@ -103,7 +106,7 @@ export function StructuredAgentOutput({
         >
           <span className="font-bold uppercase tracking-wide mr-1.5">{tagUpper}:</span>
           {renderFormattedInline(rest.join(":").trim(), highlight, isRegex)}
-        </div>
+        </div>,
       );
       continue;
     }
@@ -113,17 +116,13 @@ export function StructuredAgentOutput({
     blocks.push(
       <p key={`p-${i}`} className="my-1.5 text-xs leading-relaxed text-foreground/90 font-normal">
         {renderFormattedInline(line, highlight, isRegex)}
-      </p>
+      </p>,
     );
   }
 
   flushList();
 
-  return (
-    <div className={`space-y-1 text-left ${className}`}>
-      {blocks}
-    </div>
-  );
+  return <div className={`space-y-1 text-left ${className}`}>{blocks}</div>;
 }
 
 function renderFormattedInline(text: string, highlight: string, isRegex: boolean): React.ReactNode {
@@ -178,7 +177,9 @@ function renderFormattedInline(text: string, highlight: string, isRegex: boolean
 function applyHighlight(text: string, highlight: string, isRegex: boolean): React.ReactNode {
   if (!highlight || !highlight.trim()) return text;
   try {
-    const re = isRegex ? new RegExp(`(${highlight})`, "gi") : new RegExp(`(${highlight.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
+    const re = isRegex
+      ? new RegExp(`(${highlight})`, "gi")
+      : new RegExp(`(${highlight.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
     const parts = text.split(re);
     if (parts.length === 1) return text;
     return parts.map((chunk, idx) =>
@@ -188,7 +189,7 @@ function applyHighlight(text: string, highlight: string, isRegex: boolean): Reac
         </mark>
       ) : (
         chunk
-      )
+      ),
     );
   } catch {
     return text;

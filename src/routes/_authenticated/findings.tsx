@@ -1,24 +1,18 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
-import { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { CirrusLogo } from '@/components/cirrus-logo';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { FindingsList } from '@/components/findings-list';
-import {
-  ArrowLeft,
-  Search,
-  ShieldAlert,
-  Loader2,
-  RefreshCw,
-} from 'lucide-react';
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { CirrusLogo } from "@/components/cirrus-logo";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { FindingsList } from "@/components/findings-list";
+import { ArrowLeft, Search, ShieldAlert, Loader2, RefreshCw } from "lucide-react";
 
 interface FindingRow {
   id: string;
   scan_id: string;
   agent_run_id: string | null;
-  severity: 'info' | 'low' | 'medium' | 'high' | 'critical';
+  severity: "info" | "low" | "medium" | "high" | "critical";
   title: string;
   description: string | null;
   resource: string | null;
@@ -32,9 +26,9 @@ interface ScanMeta {
   region: string;
 }
 
-export const Route = createFileRoute('/_authenticated/findings')({
+export const Route = createFileRoute("/_authenticated/findings")({
   ssr: false,
-  head: () => ({ meta: [{ title: 'All Findings · Cirrus' }] }),
+  head: () => ({ meta: [{ title: "All Findings · Cirrus" }] }),
   component: AllFindingsPage,
 });
 
@@ -50,18 +44,15 @@ function AllFindingsPage() {
   const [findings, setFindings] = useState<FindingRow[]>([]);
   const [scans, setScans] = useState<Record<string, ScanMeta>>({});
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [severityFilter, setSeverityFilter] = useState<string>("all");
 
   async function loadData() {
     setLoading(true);
     try {
       const [{ data: fData }, { data: sData }] = await Promise.all([
-        supabase
-          .from('findings')
-          .select('*')
-          .order('created_at', { ascending: false }),
-        supabase.from('scans').select('id, name, region'),
+        supabase.from("findings").select("*").order("created_at", { ascending: false }),
+        supabase.from("scans").select("id, name, region"),
       ]);
 
       setFindings((fData ?? []) as FindingRow[]);
@@ -71,7 +62,7 @@ function AllFindingsPage() {
       }
       setScans(sMap);
     } catch (err) {
-      console.error('Failed to load global findings:', err);
+      console.error("Failed to load global findings:", err);
     } finally {
       setLoading(false);
     }
@@ -84,16 +75,16 @@ function AllFindingsPage() {
   const filteredFindings = useMemo(() => {
     return findings
       .filter((f) => {
-        const s = (f.severity || 'info').toLowerCase();
-        if (severityFilter !== 'all' && s !== severityFilter.toLowerCase()) {
+        const s = (f.severity || "info").toLowerCase();
+        if (severityFilter !== "all" && s !== severityFilter.toLowerCase()) {
           return false;
         }
         if (search.trim()) {
           const q = search.toLowerCase();
-          const matchTitle = (f.title ?? '').toLowerCase().includes(q);
-          const res = f.resource || (f as any).resource_id || '';
+          const matchTitle = (f.title ?? "").toLowerCase().includes(q);
+          const res = f.resource || (f as any).resource_id || "";
           const matchResource = res.toLowerCase().includes(q);
-          const matchDesc = (f.description ?? '').toLowerCase().includes(q);
+          const matchDesc = (f.description ?? "").toLowerCase().includes(q);
           return matchTitle || matchResource || matchDesc;
         }
         return true;
@@ -109,7 +100,7 @@ function AllFindingsPage() {
 
   const counts = useMemo(() => {
     return findings.reduce<Record<string, number>>((acc, f) => {
-      const s = (f.severity || 'info').toLowerCase();
+      const s = (f.severity || "info").toLowerCase();
       acc[s] = (acc[s] ?? 0) + 1;
       return acc;
     }, {});
@@ -144,7 +135,8 @@ function AllFindingsPage() {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Cross-Resource Findings</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Consolidated security findings sorted by criticality across all audited AWS resources and scans.
+              Consolidated security findings sorted by criticality across all audited AWS resources
+              and scans.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -161,7 +153,9 @@ function AllFindingsPage() {
                   key={s}
                   variant="outline"
                   className={`cursor-pointer font-mono text-[11px] uppercase transition-all ${cls[s]} ${
-                    severityFilter === s ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
+                    severityFilter === s
+                      ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                      : ""
                   }`}
                   onClick={() => setSeverityFilter(severityFilter === s ? "all" : s)}
                 >
@@ -196,7 +190,13 @@ function AllFindingsPage() {
               <option value="low">Low</option>
               <option value="info">Informational</option>
             </select>
-            <Button size="sm" variant="outline" className="h-9 text-xs" onClick={loadData} disabled={loading}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 text-xs"
+              onClick={loadData}
+              disabled={loading}
+            >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
             </Button>
           </div>
@@ -215,7 +215,10 @@ function AllFindingsPage() {
         ) : (
           <div className="space-y-4">
             <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-              <span>Displaying {filteredFindings.length} finding{filteredFindings.length === 1 ? "" : "s"} (Sorted by Criticality)</span>
+              <span>
+                Displaying {filteredFindings.length} finding
+                {filteredFindings.length === 1 ? "" : "s"} (Sorted by Criticality)
+              </span>
               {severityFilter !== "all" && (
                 <button
                   onClick={() => setSeverityFilter("all")}

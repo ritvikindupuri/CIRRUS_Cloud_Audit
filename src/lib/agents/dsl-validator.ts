@@ -34,29 +34,67 @@ export type CustomAgentDsl = z.infer<typeof CustomAgentDslSchema>;
 // tool catalog OR not in the whitelist. We report these as "blocked" so the
 // author knows the agent literally cannot perform them at runtime.
 const KNOWN_AWS_SERVICES = [
-  "sts", "iam", "s3", "ec2", "rds", "lambda", "dynamodb", "kms", "kinesis",
-  "sns", "sqs", "cloudfront", "route53", "cloudtrail", "cloudwatch", "logs",
-  "ssm", "secretsmanager", "eks", "ecs", "ecr", "apigateway", "elasticache",
-  "redshift", "athena", "glue", "sagemaker", "stepfunctions",
+  "sts",
+  "iam",
+  "s3",
+  "ec2",
+  "rds",
+  "lambda",
+  "dynamodb",
+  "kms",
+  "kinesis",
+  "sns",
+  "sqs",
+  "cloudfront",
+  "route53",
+  "cloudtrail",
+  "cloudwatch",
+  "logs",
+  "ssm",
+  "secretsmanager",
+  "eks",
+  "ecs",
+  "ecr",
+  "apigateway",
+  "elasticache",
+  "redshift",
+  "athena",
+  "glue",
+  "sagemaker",
+  "stepfunctions",
 ];
 
 // Hard-blocked verbs: even if a service is whitelisted, Cirrus is read-only
 // at scan time. Mutations like delete/create/put/modify must go through
 // the remediation playbook flow, not a custom agent.
 const FORBIDDEN_VERBS = [
-  "delete", "destroy", "terminate", "remove",
-  "create", "put", "post",
-  "modify", "update", "patch", "replace",
-  "stop", "start", "reboot",
-  "attach", "detach", "grant", "revoke",
-  "publish", "send",
+  "delete",
+  "destroy",
+  "terminate",
+  "remove",
+  "create",
+  "put",
+  "post",
+  "modify",
+  "update",
+  "patch",
+  "replace",
+  "stop",
+  "start",
+  "reboot",
+  "attach",
+  "detach",
+  "grant",
+  "revoke",
+  "publish",
+  "send",
 ];
 
 export interface DslValidationResult {
   ok: boolean;
-  errors: string[];                              // hard errors — block save
-  blockedServices: string[];                     // mentioned but not whitelisted
-  unsupportedServices: string[];                 // not in catalog at all
+  errors: string[]; // hard errors — block save
+  blockedServices: string[]; // mentioned but not whitelisted
+  unsupportedServices: string[]; // not in catalog at all
   forbiddenCommands: { verb: string; phrase: string }[]; // mutation verbs in prompt
   warnings: string[];
 }
@@ -73,9 +111,7 @@ export function validateCustomAgentDsl(input: unknown): DslValidationResult {
   };
 
   if (!parsed.success) {
-    result.errors = parsed.error.issues.map(
-      (i) => `${i.path.join(".") || "value"}: ${i.message}`,
-    );
+    result.errors = parsed.error.issues.map((i) => `${i.path.join(".") || "value"}: ${i.message}`);
     return result;
   }
 

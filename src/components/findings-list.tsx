@@ -12,7 +12,6 @@ import {
   AlertTriangle,
   Clock,
   FileCheck2,
-  Layers,
   History,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -69,7 +68,8 @@ export function FindingsList({ findings }: { findings: Finding[] }) {
   }
   const sortOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
   const sorted = [...findings].sort(
-    (a, b) => (sortOrder[a.severity?.toLowerCase()] ?? 99) - (sortOrder[b.severity?.toLowerCase()] ?? 99),
+    (a, b) =>
+      (sortOrder[a.severity?.toLowerCase()] ?? 99) - (sortOrder[b.severity?.toLowerCase()] ?? 99),
   );
   return (
     <div className="space-y-2">
@@ -133,7 +133,11 @@ function FindingCard({ finding: f }: { finding: Finding }) {
       // Automatically perform the CloudFormation dry-run simulation in the background
       // so the user immediately gets the verified snapshot, diff, and execution change set.
       const creds = loadCreds();
-      if (creds && typeof (r as any)?.cloudformation === "string" && (r as any).cloudformation.trim().length > 0) {
+      if (
+        creds &&
+        typeof (r as any)?.cloudformation === "string" &&
+        (r as any).cloudformation.trim().length > 0
+      ) {
         setCfnBusy("dry");
         runDryRunOnce(creds)
           .catch((dryErr) => {
@@ -168,7 +172,10 @@ function FindingCard({ finding: f }: { finding: Finding }) {
 
   async function dryRun() {
     const creds = loadCreds();
-    if (!creds) return toast.error("AWS credentials are no longer in this tab. Start a new scan to re-enter them.");
+    if (!creds)
+      return toast.error(
+        "AWS credentials are no longer in this tab. Start a new scan to re-enter them.",
+      );
     setCfnBusy("dry");
     try {
       await runDryRunOnce(creds);
@@ -214,7 +221,12 @@ function FindingCard({ finding: f }: { finding: Finding }) {
 
   async function apply() {
     if (!deployment) return;
-    if (!confirm(`Apply this CloudFormation fix to your AWS account?\nStack: ${deployment.stack_name}`)) return;
+    if (
+      !confirm(
+        `Apply this CloudFormation fix to your AWS account?\nStack: ${deployment.stack_name}`,
+      )
+    )
+      return;
     const creds = loadCreds();
     if (!creds) return toast.error("AWS credentials are no longer in this tab.");
     setCfnBusy("apply");
@@ -258,19 +270,30 @@ function FindingCard({ finding: f }: { finding: Finding }) {
     }
   }
 
-  const hasCfn = typeof remediation?.cloudformation === "string" && (remediation.cloudformation as string).trim().length > 0;
-  const requiresIam = hasCfn && typeof remediation.cloudformation === "string" && remediation.cloudformation.includes("AWS::IAM::");
+  const hasCfn =
+    typeof remediation?.cloudformation === "string" &&
+    (remediation.cloudformation as string).trim().length > 0;
+  const requiresIam =
+    hasCfn &&
+    typeof remediation.cloudformation === "string" &&
+    remediation.cloudformation.includes("AWS::IAM::");
 
   return (
     <div className="rounded-md border border-border bg-surface">
       <div className="p-3">
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className={`font-mono text-[10px] uppercase ${SEV_CLASS[(f.severity || "info").toLowerCase()] || SEV_CLASS.info}`}>
+          <Badge
+            variant="outline"
+            className={`font-mono text-[10px] uppercase ${SEV_CLASS[(f.severity || "info").toLowerCase()] || SEV_CLASS.info}`}
+          >
             {f.severity}
           </Badge>
           <span className="text-sm font-medium text-foreground truncate flex-1">{f.title}</span>
           {deployment?.executed && !deployment.rolled_back && (
-            <Badge variant="outline" className="font-mono text-[10px] text-severity-info border-severity-info/40">
+            <Badge
+              variant="outline"
+              className="font-mono text-[10px] text-severity-info border-severity-info/40"
+            >
               <ShieldCheck className="mr-1 h-3 w-3" /> applied
             </Badge>
           )}
@@ -281,20 +304,32 @@ function FindingCard({ finding: f }: { finding: Finding }) {
           )}
         </div>
         {(f.resource || (f as any).resource_id) && (
-          <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">{f.resource || (f as any).resource_id}</div>
+          <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
+            {f.resource || (f as any).resource_id}
+          </div>
         )}
         {f.description && (
           <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">{f.description}</p>
         )}
         <div className="mt-2 flex items-center gap-2">
-          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={load} disabled={loading}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs"
+            onClick={load}
+            disabled={loading}
+          >
             {loading ? (
               <Loader2 className="mr-1 h-3 w-3 animate-spin" />
             ) : (
               <Wrench className="mr-1 h-3 w-3" />
             )}
             {remediation ? (open ? "Hide playbook" : "Show playbook") : "Generate fix playbook"}
-            {remediation && <ChevronDown className={`ml-1 h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} />}
+            {remediation && (
+              <ChevronDown
+                className={`ml-1 h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`}
+              />
+            )}
           </Button>
         </div>
       </div>
@@ -305,7 +340,11 @@ function FindingCard({ finding: f }: { finding: Finding }) {
             <p className="text-xs text-foreground leading-relaxed">{remediation.explanation}</p>
           )}
           {typeof remediation.cli === "string" && remediation.cli.trim() && (
-            <Block label="AWS CLI" code={remediation.cli} onCopy={() => copy(String(remediation.cli))} />
+            <Block
+              label="AWS CLI"
+              code={remediation.cli}
+              onCopy={() => copy(String(remediation.cli))}
+            />
           )}
           {typeof remediation.cloudformation === "string" && remediation.cloudformation.trim() && (
             <Block
@@ -319,7 +358,9 @@ function FindingCard({ finding: f }: { finding: Finding }) {
               <div className="mb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
                 Rollback notes
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">{remediation.rollback}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {remediation.rollback}
+              </p>
             </div>
           )}
 
@@ -330,26 +371,42 @@ function FindingCard({ finding: f }: { finding: Finding }) {
                   One-click CloudFormation fix
                 </div>
                 {deployment && (
-                  <Badge variant="outline" className="font-mono text-[10px]">{deployment.status}</Badge>
+                  <Badge variant="outline" className="font-mono text-[10px]">
+                    {deployment.status}
+                  </Badge>
                 )}
               </div>
               {requiresIam && !deployment?.executed && (
                 <div className="mb-3 flex items-start gap-2 rounded bg-amber-500/10 border border-amber-500/30 p-2.5">
-                  <Checkbox 
-                    id={`iam-ack-${f.id}`} 
-                    checked={iamAcknowledged} 
-                    onCheckedChange={(checked) => setIamAcknowledged(checked === true)} 
+                  <Checkbox
+                    id={`iam-ack-${f.id}`}
+                    checked={iamAcknowledged}
+                    onCheckedChange={(checked) => setIamAcknowledged(checked === true)}
                     className="mt-0.5"
                   />
-                  <label htmlFor={`iam-ack-${f.id}`} className="text-[11px] leading-tight text-amber-500 cursor-pointer">
-                    <strong>Required Capability:</strong> This playbook creates IAM resources and requires <code className="font-mono bg-amber-500/20 px-1 rounded text-foreground">CAPABILITY_NAMED_IAM</code> to deploy.
+                  <label
+                    htmlFor={`iam-ack-${f.id}`}
+                    className="text-[11px] leading-tight text-amber-500 cursor-pointer"
+                  >
+                    <strong>Required Capability:</strong> This playbook creates IAM resources and
+                    requires{" "}
+                    <code className="font-mono bg-amber-500/20 px-1 rounded text-foreground">
+                      CAPABILITY_NAMED_IAM
+                    </code>{" "}
+                    to deploy.
                   </label>
                 </div>
               )}
 
               <div className="flex flex-wrap items-center gap-2">
                 {(!deployment || deployment.change_set_status !== "CREATE_COMPLETE") && (
-                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={dryRun} disabled={cfnBusy !== null}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={dryRun}
+                    disabled={cfnBusy !== null}
+                  >
                     {cfnBusy === "dry" ? (
                       <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                     ) : (
@@ -359,9 +416,16 @@ function FindingCard({ finding: f }: { finding: Finding }) {
                   </Button>
                 )}
                 {deployment?.change_set_status === "CREATE_COMPLETE" && (
-                  <Badge variant="outline" className="h-7 px-2.5 font-mono text-xs border-emerald-500/40 text-emerald-400 bg-emerald-500/10 flex items-center gap-1.5">
+                  <Badge
+                    variant="outline"
+                    className="h-7 px-2.5 font-mono text-xs border-emerald-500/40 text-emerald-400 bg-emerald-500/10 flex items-center gap-1.5"
+                  >
                     <ShieldCheck className="h-3.5 w-3.5" />
-                    Simulation Verified ({Array.isArray(deployment.change_set_changes) ? (deployment.change_set_changes as any[]).length : 0} changes)
+                    Simulation Verified (
+                    {Array.isArray(deployment.change_set_changes)
+                      ? (deployment.change_set_changes as any[]).length
+                      : 0}{" "}
+                    changes)
                   </Badge>
                 )}
                 <Button
@@ -369,9 +433,9 @@ function FindingCard({ finding: f }: { finding: Finding }) {
                   className="h-7 text-xs"
                   onClick={apply}
                   disabled={
-                    cfnBusy !== null || 
-                    !deployment || 
-                    deployment.executed || 
+                    cfnBusy !== null ||
+                    !deployment ||
+                    deployment.executed ||
                     deployment.change_set_status !== "CREATE_COMPLETE" ||
                     (requiresIam && !iamAcknowledged)
                   }
@@ -403,9 +467,9 @@ function FindingCard({ finding: f }: { finding: Finding }) {
 
               {deployment && (
                 <div className="mt-3 border-t border-border/40 pt-2.5">
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
+                  <Button
+                    size="sm"
+                    variant="ghost"
                     className="h-5 px-1 text-[10px] text-muted-foreground hover:text-foreground"
                     onClick={() => setShowAuditLogs(!showAuditLogs)}
                   >
@@ -421,12 +485,19 @@ function FindingCard({ finding: f }: { finding: Finding }) {
                         </div>
                         <div>
                           <span className="text-muted-foreground">Status:</span>{" "}
-                          <Badge variant="outline" className="font-mono text-[9px] uppercase px-1 h-4">{deployment.status}</Badge>
+                          <Badge
+                            variant="outline"
+                            className="font-mono text-[9px] uppercase px-1 h-4"
+                          >
+                            {deployment.status}
+                          </Badge>
                         </div>
                         {deployment.change_set_name && (
                           <div className="col-span-2">
                             <span className="text-muted-foreground">Change Set:</span>{" "}
-                            <span className="font-mono text-foreground">{deployment.change_set_name}</span>
+                            <span className="font-mono text-foreground">
+                              {deployment.change_set_name}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -436,25 +507,34 @@ function FindingCard({ finding: f }: { finding: Finding }) {
                         <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
                           CloudFormation Event History
                         </div>
-                        {Array.isArray((deployment as any).cfn_events) && ((deployment as any).cfn_events as any[]).length > 0 ? (
+                        {Array.isArray((deployment as any).cfn_events) &&
+                        ((deployment as any).cfn_events as any[]).length > 0 ? (
                           <div className="max-h-48 overflow-y-auto space-y-1.5 border border-border p-2 rounded bg-background">
                             {((deployment as any).cfn_events as any[]).map((ev: any, i: number) => (
-                              <div key={i} className="font-mono text-[10px] leading-snug border-b border-border/40 last:border-0 pb-1.5 last:pb-0">
+                              <div
+                                key={i}
+                                className="font-mono text-[10px] leading-snug border-b border-border/40 last:border-0 pb-1.5 last:pb-0"
+                              >
                                 <div className="flex justify-between text-[9px] text-muted-foreground">
                                   <span>{new Date(ev.timestamp).toLocaleString()}</span>
                                   <span className="text-primary font-semibold">{ev.status}</span>
                                 </div>
                                 <div className="text-foreground">
-                                  {ev.logicalId} <span className="text-muted-foreground">({ev.type})</span>
+                                  {ev.logicalId}{" "}
+                                  <span className="text-muted-foreground">({ev.type})</span>
                                 </div>
                                 {ev.reason && (
-                                  <div className="text-destructive text-[9.5px] mt-0.5">{ev.reason}</div>
+                                  <div className="text-destructive text-[9.5px] mt-0.5">
+                                    {ev.reason}
+                                  </div>
                                 )}
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-[10px] text-muted-foreground italic">No events recorded. Events appear when dry-running or executing.</p>
+                          <p className="text-[10px] text-muted-foreground italic">
+                            No events recorded. Events appear when dry-running or executing.
+                          </p>
                         )}
                       </div>
                     </div>
@@ -473,7 +553,9 @@ function FindingCard({ finding: f }: { finding: Finding }) {
                   findingTitle={f.title}
                   resourceName={f.resource}
                   cloudformationTemplate={
-                    typeof remediation.cloudformation === "string" ? remediation.cloudformation : undefined
+                    typeof remediation.cloudformation === "string"
+                      ? remediation.cloudformation
+                      : undefined
                   }
                 />
               </div>
@@ -488,7 +570,10 @@ function FindingCard({ finding: f }: { finding: Finding }) {
                         Verified State Snapshot Secured
                       </span>
                     </div>
-                    <Badge variant="outline" className="font-mono text-[9px] uppercase border-emerald-500/40 text-emerald-400">
+                    <Badge
+                      variant="outline"
+                      className="font-mono text-[9px] uppercase border-emerald-500/40 text-emerald-400"
+                    >
                       Rollback-Ready
                     </Badge>
                   </div>
@@ -499,10 +584,15 @@ function FindingCard({ finding: f }: { finding: Finding }) {
                     </div>
                     <div>
                       <span className="text-muted-foreground">Snapshot Taken At:</span>{" "}
-                      <span className="text-foreground">{new Date(deployment.created_at).toLocaleString()}</span>
+                      <span className="text-foreground">
+                        {new Date(deployment.created_at).toLocaleString()}
+                      </span>
                     </div>
                     <div className="md:col-span-2 text-muted-foreground text-[10.5px]">
-                      Ledger Status: <span className="text-emerald-400">Committed to Supabase audit record (ID: {deployment.id})</span>
+                      Ledger Status:{" "}
+                      <span className="text-emerald-400">
+                        Committed to Supabase audit record (ID: {deployment.id})
+                      </span>
                     </div>
                   </div>
 
@@ -524,15 +614,27 @@ function FindingCard({ finding: f }: { finding: Finding }) {
                       {showVersionHistory && (
                         <div className="mt-2 space-y-1.5 rounded border border-border bg-background/80 p-2 text-[10.5px] font-mono">
                           {deploymentsHistory.map((d, idx) => (
-                            <div key={d.id} className="flex items-center justify-between border-b border-border/40 pb-1 last:border-0 last:pb-0">
+                            <div
+                              key={d.id}
+                              className="flex items-center justify-between border-b border-border/40 pb-1 last:border-0 last:pb-0"
+                            >
                               <div>
-                                <span className="text-muted-foreground">v{deploymentsHistory.length - idx}</span> ·{" "}
-                                <span className="text-foreground">{new Date(d.created_at).toLocaleTimeString()}</span> ·{" "}
-                                <span className="text-primary">{d.stack_name}</span>
+                                <span className="text-muted-foreground">
+                                  v{deploymentsHistory.length - idx}
+                                </span>{" "}
+                                ·{" "}
+                                <span className="text-foreground">
+                                  {new Date(d.created_at).toLocaleTimeString()}
+                                </span>{" "}
+                                · <span className="text-primary">{d.stack_name}</span>
                               </div>
                               <div className="flex items-center gap-1.5">
                                 <Badge variant="outline" className="text-[9px] uppercase">
-                                  {d.rolled_back ? "Rolled Back" : d.executed ? "Executed" : d.status}
+                                  {d.rolled_back
+                                    ? "Rolled Back"
+                                    : d.executed
+                                      ? "Executed"
+                                      : d.status}
                                 </Badge>
                               </div>
                             </div>
@@ -544,28 +646,33 @@ function FindingCard({ finding: f }: { finding: Finding }) {
                 </div>
               )}
 
-              {Array.isArray(deployment?.change_set_changes) && (deployment!.change_set_changes as unknown[]).length > 0 && (
-                <div className="mt-3 space-y-1">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-                    CloudFormation Change Set Actions
-                  </div>
-                  {(deployment!.change_set_changes as Array<{
-                    action?: string;
-                    logicalResourceId?: string;
-                    resourceType?: string;
-                    replacement?: string;
-                  }>).map((c, i) => (
-                    <div key={i} className="font-mono text-[11px] flex items-center gap-2">
-                      <Badge variant="outline" className="text-[9px] uppercase">{c.action ?? "?"}</Badge>
-                      <span className="text-muted-foreground">{c.resourceType}</span>
-                      <span className="text-foreground">{c.logicalResourceId}</span>
-                      {c.replacement && c.replacement !== "False" && (
-                        <span className="text-severity-medium">replacement: {c.replacement}</span>
-                      )}
+              {Array.isArray(deployment?.change_set_changes) &&
+                (deployment!.change_set_changes as unknown[]).length > 0 && (
+                  <div className="mt-3 space-y-1">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                      CloudFormation Change Set Actions
                     </div>
-                  ))}
-                </div>
-              )}
+                    {(
+                      deployment!.change_set_changes as Array<{
+                        action?: string;
+                        logicalResourceId?: string;
+                        resourceType?: string;
+                        replacement?: string;
+                      }>
+                    ).map((c, i) => (
+                      <div key={i} className="font-mono text-[11px] flex items-center gap-2">
+                        <Badge variant="outline" className="text-[9px] uppercase">
+                          {c.action ?? "?"}
+                        </Badge>
+                        <span className="text-muted-foreground">{c.resourceType}</span>
+                        <span className="text-foreground">{c.logicalResourceId}</span>
+                        {c.replacement && c.replacement !== "False" && (
+                          <span className="text-severity-medium">replacement: {c.replacement}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
             </div>
           )}
         </div>
@@ -578,7 +685,9 @@ function Block({ label, code, onCopy }: { label: string; code: string; onCopy: (
   return (
     <div>
       <div className="mb-1 flex items-center justify-between">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{label}</div>
+        <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+          {label}
+        </div>
         <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={onCopy}>
           <Copy className="mr-1 h-3 w-3" /> Copy
         </Button>

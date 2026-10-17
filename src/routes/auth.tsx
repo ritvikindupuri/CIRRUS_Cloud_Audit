@@ -44,7 +44,9 @@ function AuthPage() {
           toast.success("Operator provisioned. Redirecting...");
           window.location.href = "/dashboard";
         } else {
-          toast.success("Account created! Please check your email to confirm, or sign in if confirmation is disabled.");
+          toast.success(
+            "Account created! Please check your email to confirm, or sign in if confirmation is disabled.",
+          );
           setMode("signin");
         }
       } else {
