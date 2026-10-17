@@ -87,11 +87,20 @@ export const createDryRunChangeSet = createServerFn({ method: "POST" })
       await import("@aws-sdk/client-cloudformation");
     const client = await cfnClient(creds);
 
-    // Detect whether the stack already exists, decide CREATE vs UPDATE.
+    // Detect whether the stack already exists and has been created/executed.
+    // In CloudFormation, a stack in REVIEW_IN_PROGRESS status has NOT been created yet,
+    // so any new change set must use ChangeSetType: "CREATE".
     let exists = false;
     try {
       const out = await client.send(new DescribeStacksCommand({ StackName: stackName }));
-      exists = (out.Stacks?.length ?? 0) > 0;
+      const stack = out.Stacks?.[0];
+      if (
+        stack &&
+        stack.StackStatus !== "REVIEW_IN_PROGRESS" &&
+        stack.StackStatus !== "DELETE_COMPLETE"
+      ) {
+        exists = true;
+      }
     } catch {
       exists = false;
     }

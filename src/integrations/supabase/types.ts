@@ -116,7 +116,8 @@ export type Database = {
           id: string;
           name: string;
           services: string[];
-          system_prompt: string;
+          system_prompt: string | null;
+          prompt: string | null;
           user_id: string;
         };
         Insert: {
@@ -126,7 +127,8 @@ export type Database = {
           id?: string;
           name: string;
           services?: string[];
-          system_prompt: string;
+          system_prompt?: string | null;
+          prompt?: string | null;
           user_id: string;
         };
         Update: {
@@ -136,7 +138,8 @@ export type Database = {
           id?: string;
           name?: string;
           services?: string[];
-          system_prompt?: string;
+          system_prompt?: string | null;
+          prompt?: string | null;
           user_id?: string;
         };
         Relationships: [];
@@ -150,6 +153,8 @@ export type Database = {
           id: string;
           remediation: Json | null;
           resource: string | null;
+          resource_id: string | null;
+          resource_type: string | null;
           scan_id: string;
           severity: string;
           title: string;
@@ -162,6 +167,8 @@ export type Database = {
           id?: string;
           remediation?: Json | null;
           resource?: string | null;
+          resource_id?: string | null;
+          resource_type?: string | null;
           scan_id: string;
           severity: string;
           title: string;
@@ -174,6 +181,8 @@ export type Database = {
           id?: string;
           remediation?: Json | null;
           resource?: string | null;
+          resource_id?: string | null;
+          resource_type?: string | null;
           scan_id?: string;
           severity?: string;
           title?: string;

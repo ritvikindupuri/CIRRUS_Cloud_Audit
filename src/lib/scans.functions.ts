@@ -80,9 +80,17 @@ export const runScan = createServerFn({ method: "POST" })
     if (customIds.length > 0) {
       const { data: customs } = await supabase
         .from("custom_agents")
-        .select("id, name, description, system_prompt, services")
+        .select("*")
         .in("id", customIds);
-      for (const c of customs ?? []) customMap.set(c.id, c);
+      for (const c of customs ?? []) {
+        customMap.set(c.id, {
+          id: c.id,
+          name: c.name,
+          description: c.description ?? null,
+          system_prompt: c.system_prompt || c.prompt || "",
+          services: c.services ?? [],
+        });
+      }
     }
 
     const { runAgent } = await import("@/lib/agents/runner.server");
@@ -154,13 +162,16 @@ export const generateRemediation = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
 
     // Authorization: verify user owns the finding
-    const { data: finding } = await supabase
+    const { data: finding, error: findingErr } = await supabase
       .from("findings")
-      .select("id, severity, title, description, resource, scan_id, remediation")
+      .select("id, severity, title, description, resource_id, scan_id, remediation")
       .eq("id", data.findingId)
       .single();
-    if (!finding) {
-      console.error("[generateRemediation] Finding not found", { findingId: data.findingId });
+    if (findingErr || !finding) {
+      console.error("[generateRemediation] Finding not found", {
+        findingId: data.findingId,
+        error: findingErr,
+      });
       throw new Error("Finding not found");
     }
 
@@ -200,7 +211,7 @@ export const generateRemediation = createServerFn({ method: "POST" })
 
 Severity: ${finding.severity}
 Title: ${finding.title}
-Resource: ${finding.resource ?? "n/a"}
+Resource: ${finding.resource_id ?? "n/a"}
 Region: ${scan.region}
 Description: ${finding.description ?? "n/a"}
 
@@ -326,12 +337,14 @@ export const checkAndSendDriftReminders = createServerFn({ method: "POST" })
     // Get the user's email address and Resend configuration from profiles
     const { data: profile, error: profileErr } = await supabase
       .from("profiles")
-      .select("email, display_name, resend_api_key, resend_from_email")
+      .select("*")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
 
     if (profileErr || !profile?.email) {
-      console.error("[Cirrus Reminders] Profile email not found for user:", userId, profileErr);
+      if (profileErr) {
+        console.error("[Cirrus Reminders] Profile fetch error for user:", userId, profileErr);
+      }
       return { ok: false, error: "User profile or email not found" };
     }
 
@@ -466,15 +479,15 @@ export const replayAgentNode = createServerFn({ method: "POST" })
     if (run.custom_agent_id) {
       const { data: custom } = await supabase
         .from("custom_agents")
-        .select("id, name, description, system_prompt, services")
+        .select("*")
         .eq("id", run.custom_agent_id)
-        .single();
+        .maybeSingle();
       if (custom) {
         customAgent = {
           id: custom.id,
           name: custom.name,
           description: custom.description,
-          system_prompt: custom.system_prompt,
+          system_prompt: custom.system_prompt || custom.prompt || "",
           services: custom.services,
         };
       }
@@ -495,6 +508,49 @@ export const replayAgentNode = createServerFn({ method: "POST" })
       apiKey,
       customAgent,
     }).catch(console.error);
+
+    return { ok: true };
+  });
+
+export const deleteScan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ scanId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { scanId } = data;
+
+    // Verify ownership
+    const { data: scan, error: sErr } = await supabase
+      .from("scans")
+      .select("id, user_id")
+      .eq("id", scanId)
+      .maybeSingle();
+
+    if (sErr || !scan || scan.user_id !== userId) {
+      throw new Error("Scan not found or not authorized");
+    }
+
+    // 1. Delete agent_steps
+    const { data: runs } = await supabase.from("agent_runs").select("id").eq("scan_id", scanId);
+    const runIds = (runs ?? []).map((r) => r.id);
+    if (runIds.length > 0) {
+      await supabase.from("agent_steps").delete().in("agent_run_id", runIds);
+    }
+
+    // 2. Delete remediation deployments & findings
+    const { data: findings } = await supabase.from("findings").select("id").eq("scan_id", scanId);
+    const findingIds = (findings ?? []).map((f) => f.id);
+    if (findingIds.length > 0) {
+      await supabase.from("remediation_deployments").delete().in("finding_id", findingIds);
+      await supabase.from("findings").delete().eq("scan_id", scanId);
+    }
+
+    // 3. Delete agent_runs
+    await supabase.from("agent_runs").delete().eq("scan_id", scanId);
+
+    // 4. Delete scan
+    const { error: delErr } = await supabase.from("scans").delete().eq("id", scanId);
+    if (delErr) throw delErr;
 
     return { ok: true };
   });

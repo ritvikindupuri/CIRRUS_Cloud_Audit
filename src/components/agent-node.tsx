@@ -2,10 +2,19 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { Key, Network, Radar, Container, Check, Loader2, AlertCircle, Clock } from "lucide-react";
 import type { AgentDefinition } from "@/lib/agents/definitions";
 
+export interface SeverityCounts {
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  info: number;
+}
+
 export interface AgentNodeData extends Record<string, unknown> {
   agent: AgentDefinition;
   status: "pending" | "running" | "complete" | "error";
   findingsCount: number;
+  severityCounts?: SeverityCounts;
   selected: boolean;
   onSelect: () => void;
 }
@@ -17,7 +26,7 @@ const ICONS = {
   network: Network,
 };
 
-const STATUS_LABEL = {
+const STATUS_LABEL: Record<string, string> = {
   pending: "Waiting",
   running: "Executing",
   complete: "Done",
@@ -25,8 +34,15 @@ const STATUS_LABEL = {
 };
 
 export function AgentNode({ data }: NodeProps) {
-  const d = data as AgentNodeData;
-  const Icon = ICONS[d.agent.icon];
+  const d = (data || {}) as AgentNodeData;
+  const agent = d.agent || {
+    type: "recon",
+    name: "Agent",
+    tagline: "",
+    colorVar: "var(--color-agent-recon)",
+    icon: "radar",
+  };
+  const Icon = ICONS[agent.icon] ?? Radar;
   const StatusIcon =
     d.status === "complete"
       ? Check
@@ -35,6 +51,15 @@ export function AgentNode({ data }: NodeProps) {
         : d.status === "error"
           ? AlertCircle
           : Clock;
+
+  const sev = d.severityCounts ?? {
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+    info: 0,
+  };
+  const totalFindings = d.findingsCount;
 
   return (
     <div
@@ -52,15 +77,15 @@ export function AgentNode({ data }: NodeProps) {
       <div className="flex items-start gap-3 p-3">
         <div
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md"
-          style={{ backgroundColor: d.agent.colorVar, color: "oklch(0.15 0.012 260)" }}
+          style={{ backgroundColor: agent.colorVar, color: "oklch(0.15 0.012 260)" }}
         >
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-1">
-            <span className="truncate text-sm font-semibold text-foreground">{d.agent.name}</span>
+            <span className="truncate text-sm font-semibold text-foreground">{agent.name}</span>
           </div>
-          <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{d.agent.tagline}</div>
+          <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{agent.tagline}</div>
         </div>
       </div>
 
@@ -80,8 +105,55 @@ export function AgentNode({ data }: NodeProps) {
           {STATUS_LABEL[d.status]}
         </span>
         <span className="font-mono text-muted-foreground">
-          {d.findingsCount} finding{d.findingsCount === 1 ? "" : "s"}
+          {totalFindings} finding{totalFindings === 1 ? "" : "s"}
         </span>
+      </div>
+
+      {/* Segmented Color Criticality Bar (Critical -> High -> Medium -> Low -> Info) */}
+      <div className="px-3 pb-2.5 pt-0.5">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-2 flex">
+          {totalFindings > 0 ? (
+            <>
+              {sev.critical > 0 && (
+                <div
+                  title={`Critical: ${sev.critical}`}
+                  style={{ width: `${(sev.critical / totalFindings) * 100}%` }}
+                  className="h-full bg-severity-critical transition-all"
+                />
+              )}
+              {sev.high > 0 && (
+                <div
+                  title={`High: ${sev.high}`}
+                  style={{ width: `${(sev.high / totalFindings) * 100}%` }}
+                  className="h-full bg-severity-high transition-all"
+                />
+              )}
+              {sev.medium > 0 && (
+                <div
+                  title={`Medium: ${sev.medium}`}
+                  style={{ width: `${(sev.medium / totalFindings) * 100}%` }}
+                  className="h-full bg-severity-medium transition-all"
+                />
+              )}
+              {sev.low > 0 && (
+                <div
+                  title={`Low: ${sev.low}`}
+                  style={{ width: `${(sev.low / totalFindings) * 100}%` }}
+                  className="h-full bg-severity-low transition-all"
+                />
+              )}
+              {sev.info > 0 && (
+                <div
+                  title={`Informational: ${sev.info}`}
+                  style={{ width: `${(sev.info / totalFindings) * 100}%` }}
+                  className="h-full bg-severity-info opacity-80 transition-all"
+                />
+              )}
+            </>
+          ) : (
+            <div title="No findings detected" className="h-full w-full bg-emerald-500/20" />
+          )}
+        </div>
       </div>
     </div>
   );

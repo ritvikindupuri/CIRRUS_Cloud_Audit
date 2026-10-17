@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import {
   ReactFlow,
@@ -19,9 +19,9 @@ import { ExecutionTimeline } from "@/components/execution-timeline";
 import { CirrusLogo } from "@/components/cirrus-logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, RotateCw, Download, GitCompare, Clock, Loader2 } from "lucide-react";
+import { ArrowLeft, RotateCw, Download, GitCompare, Clock, Loader2, Trash2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { runScan, generateRemediation } from "@/lib/scans.functions";
+import { runScan, generateRemediation, deleteScan } from "@/lib/scans.functions";
 import { loadCreds } from "@/lib/aws-creds";
 import { toast } from "sonner";
 import { generateSecurityReport } from "@/lib/report-generator";
@@ -67,6 +67,7 @@ interface CustomAgentRow {
 }
 
 export const Route = createFileRoute("/_authenticated/scans/$scanId")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Scan · Cirrus" }] }),
   component: ScanDetail,
 });
@@ -83,37 +84,52 @@ function ScanDetail() {
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [tab, setTab] = useState<"trace" | "timeline" | "findings" | "drift">("trace");
   const [downloading, setDownloading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let active = true;
 
     async function load() {
-      const [{ data: s }, { data: r }, { data: f }] = await Promise.all([
-        supabase.from("scans").select("*").eq("id", scanId).maybeSingle(),
-        supabase.from("agent_runs").select("*").eq("scan_id", scanId).order("created_at"),
-        supabase.from("findings").select("*").eq("scan_id", scanId).order("created_at"),
-      ]);
-      if (!active) return;
-      setScan((s ?? null) as ScanRow | null);
-      setRuns((r ?? []) as RunRow[]);
-      setFindings((f ?? []) as FindingRow[]);
-      if (!selectedRunId && r && r.length > 0) setSelectedRunId(r[0].id);
+      try {
+        const [{ data: s, error: sErr }, { data: r, error: rErr }, { data: f, error: fErr }] =
+          await Promise.all([
+            supabase.from("scans").select("*").eq("id", scanId).maybeSingle(),
+            supabase.from("agent_runs").select("*").eq("scan_id", scanId).order("created_at"),
+            supabase.from("findings").select("*").eq("scan_id", scanId).order("created_at"),
+          ]);
+        if (sErr) throw sErr;
+        if (rErr) throw rErr;
+        if (fErr) throw fErr;
+        if (!active) return;
+        setScan((s ?? null) as ScanRow | null);
+        setRuns((r ?? []) as RunRow[]);
+        setFindings((f ?? []) as FindingRow[]);
+        setSelectedRunId((prev) => prev ?? (r && r.length > 0 ? r[0].id : null));
 
-      const customIds = (r ?? []).map((x) => x.custom_agent_id).filter((x): x is string => !!x);
-      if (customIds.length > 0) {
-        const { data: customs } = await supabase
-          .from("custom_agents")
-          .select("id, name, description, color")
-          .in("id", customIds);
-        const map: Record<string, CustomAgentRow> = {};
-        for (const c of customs ?? []) map[c.id] = c as CustomAgentRow;
-        if (active) setCustomAgents(map);
-      }
+        const customIds = (r ?? []).map((x) => x.custom_agent_id).filter((x): x is string => !!x);
+        if (customIds.length > 0) {
+          const { data: customs } = await supabase
+            .from("custom_agents")
+            .select("id, name, description, color")
+            .in("id", customIds);
+          const map: Record<string, CustomAgentRow> = {};
+          for (const c of customs ?? []) map[c.id] = c as CustomAgentRow;
+          if (active) setCustomAgents(map);
+        }
 
-      const parentId = (s as ScanRow | null)?.parent_scan_id;
-      if (parentId) {
-        const { data: pf } = await supabase.from("findings").select("*").eq("scan_id", parentId);
-        if (active) setParentFindings((pf ?? []) as FindingRow[]);
+        const parentId = (s as ScanRow | null)?.parent_scan_id;
+        if (parentId) {
+          const { data: pf } = await supabase.from("findings").select("*").eq("scan_id", parentId);
+          if (active) setParentFindings((pf ?? []) as FindingRow[]);
+        }
+      } catch (err) {
+        console.error("[ScanDetail Load Error]", err);
+        if (active) setLoadError((err as any)?.message || String(err));
+      } finally {
+        if (active) setLoading(false);
       }
     }
     void load();
@@ -152,12 +168,13 @@ function ScanDetail() {
       active = false;
       void supabase.removeChannel(channel);
     };
-  }, [scanId, selectedRunId]);
+  }, [scanId]);
 
   const nodes: Node<AgentNodeData>[] = useMemo(() => {
     return runs.map((r) => {
       const custom = r.custom_agent_id ? customAgents[r.custom_agent_id] : undefined;
       const def = getAgentDefinition(r.agent_type, custom);
+      const runFindings = findings.filter((f) => f.agent_run_id === r.id);
       return {
         id: r.id,
         type: "agent",
@@ -165,7 +182,14 @@ function ScanDetail() {
         data: {
           agent: def,
           status: r.status,
-          findingsCount: findings.filter((f) => f.agent_run_id === r.id).length,
+          findingsCount: runFindings.length,
+          severityCounts: {
+            critical: runFindings.filter((f) => f.severity === "critical").length,
+            high: runFindings.filter((f) => f.severity === "high").length,
+            medium: runFindings.filter((f) => f.severity === "medium").length,
+            low: runFindings.filter((f) => f.severity === "low").length,
+            info: runFindings.filter((f) => f.severity === "info").length,
+          },
           selected: selectedRunId === r.id,
           onSelect: () => setSelectedRunId(r.id),
         },
@@ -253,8 +277,54 @@ function ScanDetail() {
     }
   }
 
+  async function handleDelete() {
+    if (!scan) return;
+    if (!confirm(`Are you sure you want to delete scan "${scan.name}"? This cannot be undone.`)) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await deleteScan({ data: { scanId } });
+      toast.success("Scan deleted successfully");
+      navigate({ to: "/dashboard" });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete scan");
+      setDeleting(false);
+    }
+  }
+
+  if (loading && !scan) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+        <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+          Loading scan session...
+        </p>
+      </div>
+    );
+  }
+
+  if (loadError && !scan) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-background px-4">
+        <div className="max-w-md text-center">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Scan Not Found</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{loadError}</p>
+          <div className="mt-6 flex justify-center gap-2">
+            <Link to="/dashboard">
+              <Button size="sm" variant="outline">
+                <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Back to dashboard
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const severityCounts = findings.reduce<Record<string, number>>((acc, f) => {
-    acc[f.severity] = (acc[f.severity] ?? 0) + 1;
+    const s = (f.severity || "info").toLowerCase();
+    acc[s] = (acc[s] ?? 0) + 1;
     return acc;
   }, {});
 
@@ -317,6 +387,21 @@ function ScanDetail() {
                 <RotateCw className="mr-1.5 h-3.5 w-3.5" /> Retry
               </Button>
             )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              onClick={handleDelete}
+              disabled={deleting}
+              title="Delete scan"
+            >
+              {deleting ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Delete
+            </Button>
             <Link to="/dashboard">
               <Button size="sm" variant="ghost">
                 <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Scans

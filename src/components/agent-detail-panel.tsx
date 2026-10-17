@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { loadCreds } from "@/lib/aws-creds";
 import { replayAgentNode } from "@/lib/scans.functions";
 import { toast } from "sonner";
+import { StructuredAgentOutput } from "@/components/structured-agent-output";
 
 interface Step {
   id: string;
@@ -177,24 +178,26 @@ export function AgentDetailPanel({ run }: { run: Run | null }) {
               return (
                 <div key={m.id} className="rounded-md border border-border bg-surface p-3">
                   <div className="mb-1 flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-                    <span className="text-primary">›</span> Thought #{idx + 1}
+                    <span className="text-primary font-bold">›</span> Thought #{idx + 1}
                   </div>
-                  <p className="text-sm text-foreground leading-relaxed">{m.thought}</p>
+                  <StructuredAgentOutput content={m.thought ?? ""} />
                 </div>
               );
             }
             if (m.kind === "final") {
               return (
-                <div key={m.id} className="rounded-md border border-primary/40 bg-primary/5 p-3">
-                  <div className="mb-1 text-[10px] font-mono uppercase tracking-wider text-primary">
-                    Final summary
+                <div
+                  key={m.id}
+                  className="rounded-md border border-primary/40 bg-primary/5 p-4 shadow-sm"
+                >
+                  <div className="mb-2 flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider font-semibold text-primary border-b border-primary/20 pb-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" /> Final
+                    Assessment & Summary
                   </div>
                   {m.error ? (
-                    <p className="text-sm text-destructive">{m.error}</p>
+                    <p className="text-xs text-destructive font-mono">{m.error}</p>
                   ) : (
-                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                      {m.thought}
-                    </p>
+                    <StructuredAgentOutput content={m.thought ?? ""} />
                   )}
                 </div>
               );

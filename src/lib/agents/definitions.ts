@@ -78,13 +78,24 @@ export function getAgentDefinition(
   type: AgentType,
   custom?: { name?: string | null; description?: string | null; color?: string | null },
 ): AgentDefinition {
-  if (type !== "custom") return AGENT_DEFINITIONS[type];
-  return {
-    ...CUSTOM_AGENT_DEFINITION,
-    name: custom?.name ?? CUSTOM_AGENT_DEFINITION.name,
-    tagline: custom?.description?.slice(0, 60) ?? CUSTOM_AGENT_DEFINITION.tagline,
-    colorVar: custom?.color ?? CUSTOM_AGENT_DEFINITION.colorVar,
-  };
+  if (type === "custom") {
+    return {
+      ...CUSTOM_AGENT_DEFINITION,
+      name: custom?.name ?? CUSTOM_AGENT_DEFINITION.name,
+      tagline: custom?.description?.slice(0, 60) ?? CUSTOM_AGENT_DEFINITION.tagline,
+      colorVar: custom?.color ?? CUSTOM_AGENT_DEFINITION.colorVar,
+    };
+  }
+  return (
+    AGENT_DEFINITIONS[type as BuiltinAgentType] ?? {
+      type: type || "recon",
+      name: String(type || "Agent").toUpperCase(),
+      tagline: "Security analysis",
+      description: "Automated security auditor",
+      colorVar: "var(--color-agent-recon)",
+      icon: "radar",
+    }
+  );
 }
 
 export const AGENT_ORDER: BuiltinAgentType[] = ["recon", "iam", "s3", "ec2"];

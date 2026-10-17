@@ -98,15 +98,23 @@ async function addFinding(
     evidence?: unknown;
   },
 ) {
-  await ctx.supabase.from("findings").insert({
+  const res = f.resource ?? "AWS Resource";
+  const payload: Record<string, unknown> = {
     scan_id: ctx.scanId,
     agent_run_id: ctx.agentRunId,
     severity: f.severity,
     title: f.title,
     description: f.description ?? null,
-    resource: f.resource ?? null,
-    evidence: f.evidence ?? null,
-  });
+    resource_id: res,
+    resource_type: "aws_resource",
+    evidence: f.evidence && typeof f.evidence === "object" ? f.evidence : { resource: res },
+  };
+  const { error } = await ctx.supabase.from("findings").insert(payload as any);
+  if (error) {
+    console.error("[addFinding Error]", error);
+  } else {
+    console.log("[addFinding Success]", f.title, res);
+  }
 }
 
 function awsConfig(creds: AwsCredsInput, region?: string) {

@@ -4,9 +4,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CirrusLogo } from "@/components/cirrus-logo";
-import { Plus, LogOut, Clock, Check, AlertCircle, Loader2, Beaker, Calendar } from "lucide-react";
+import {
+  Plus,
+  LogOut,
+  Clock,
+  Check,
+  AlertCircle,
+  Loader2,
+  Beaker,
+  Calendar,
+  ShieldAlert,
+  Trash2,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { checkAndSendDriftReminders } from "@/lib/scans.functions";
+import { checkAndSendDriftReminders, deleteScan } from "@/lib/scans.functions";
+import { toast } from "sonner";
 
 interface DueSchedule {
   id: string;
@@ -27,6 +39,7 @@ interface Scan {
 }
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Scans · Cirrus" }] }),
   component: Dashboard,
 });
@@ -82,9 +95,32 @@ function Dashboard() {
     };
   }, []);
 
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
   async function signOut() {
     await supabase.auth.signOut();
     navigate({ to: "/auth" });
+  }
+
+  async function handleDeleteScan(e: React.MouseEvent, scanId: string, scanName: string) {
+    e.stopPropagation();
+    if (
+      !confirm(
+        `Are you sure you want to delete scan "${scanName}"? This will permanently remove its findings, traces, and timeline.`,
+      )
+    ) {
+      return;
+    }
+    setDeletingId(scanId);
+    try {
+      await deleteScan({ data: { scanId } });
+      setScans((prev) => prev.filter((s) => s.id !== scanId));
+      toast.success("Scan deleted successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete scan");
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   return (
@@ -95,6 +131,11 @@ function Dashboard() {
             <CirrusLogo />
           </Link>
           <div className="flex items-center gap-2">
+            <Link to="/findings">
+              <Button size="sm" variant="ghost">
+                <ShieldAlert className="mr-1.5 h-3.5 w-3.5 text-primary" /> All findings
+              </Button>
+            </Link>
             <Link to="/agents">
               <Button size="sm" variant="ghost">
                 <Beaker className="mr-1.5 h-3.5 w-3.5" /> Custom agents
@@ -172,6 +213,7 @@ function Dashboard() {
                   <th className="px-4 py-3 font-medium">Agents</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium">Started</th>
+                  <th className="px-4 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -198,6 +240,22 @@ function Dashboard() {
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(s.created_at), { addSuffix: true })}
+                    </td>
+                    <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={(e) => handleDeleteScan(e, s.id, s.name)}
+                        disabled={deletingId === s.id}
+                        title="Delete scan"
+                      >
+                        {deletingId === s.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
                     </td>
                   </tr>
                 ))}

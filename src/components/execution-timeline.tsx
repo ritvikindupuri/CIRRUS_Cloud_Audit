@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { getAgentDefinition, type AgentType } from "@/lib/agents/definitions";
 import { Search, Terminal, AlertOctagon, Brain, CheckCircle2, ShieldAlert } from "lucide-react";
+import { StructuredAgentOutput } from "@/components/structured-agent-output";
 
 interface Step {
   id: string;
@@ -445,9 +446,9 @@ function StepBody({ s, highlight, isRegex }: { s: Step; highlight: string; isReg
       );
     }
     return (
-      <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-foreground">
-        {hl(s.thought ?? "", highlight, isRegex)}
-      </p>
+      <div className="mt-2 rounded-md border border-severity-info/20 bg-severity-info/5 p-3">
+        <StructuredAgentOutput content={s.thought ?? ""} highlight={highlight} isRegex={isRegex} />
+      </div>
     );
   }
   if (s.kind === "tool_call") {
